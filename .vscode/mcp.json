@@ -1,0 +1,18 @@
+{
+	"servers": {
+		"stitch-design-ui": {
+			"url": "https://stitch.googleapis.com/mcp",
+			"type": "http",
+			"headers": {
+				"Accept": "application/json",
+				"X-Goog-Api-Key": "AQ.Ab8RN6I3Vw0VXAhZ5NIsTYc366ISVRlYidxa1rb-ir6aW4JLEw"
+			}
+		},
+		"firebase": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "firebase-tools@latest", "mcp"]
+		}
+	},
+	"inputs": []
+}

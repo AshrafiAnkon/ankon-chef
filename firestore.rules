@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Admins collection: managed via Firebase Console only as requested
+    match /admins/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only manageable from the dashboard
+    }
+
+    // Master list of ingredients: Seed data
+    match /ingredients/{ingredientId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // User-specific recipes
+    match /recipes/{recipeId} {
+      allow create: if isOwner(request.resource.data.userId);
+      allow read, update, delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // User-specific ingredients status
+    match /userIngredients/{docId} {
+      allow read, write: if request.auth != null && (docId.startsWith(request.auth.uid + "_") || isAdmin());
+    }
+
+    // User-specific meal plans
+    match /mealPlans/{planId} {
+      allow create: if isOwner(request.resource.data.userId);
+      allow read, update, delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // User-specific pantry items
+    match /pantryItems/{itemId} {
+      allow create: if isOwner(request.resource.data.userId);
+      allow read, update, delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // Default deny for everything else unless admin
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
