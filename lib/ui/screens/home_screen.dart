@@ -62,7 +62,10 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
       body: userAsync.when(
-        data: (user) => _HomeContent(userName: user?.displayName ?? 'Alex'),
+        data: (user) {
+          if (user == null) return const Center(child: Text('User not found.'));
+          return _HomeContent(userName: user.displayName ?? 'Alex');
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),

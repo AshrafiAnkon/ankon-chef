@@ -398,7 +398,7 @@ class RecipeCard extends ConsumerWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.go('/recipes/${recipe.id}'),
+        onTap: () => context.push('/recipes/${recipe.id}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

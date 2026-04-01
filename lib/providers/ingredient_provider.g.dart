@@ -248,9 +248,9 @@ final class CurrentIngredientIdsProvider
         $FunctionalProvider<
           AsyncValue<List<String>>,
           List<String>,
-          FutureOr<List<String>>
+          Stream<List<String>>
         >
-    with $FutureModifier<List<String>>, $FutureProvider<List<String>> {
+    with $FutureModifier<List<String>>, $StreamProvider<List<String>> {
   /// Current ingredient IDs provider (for filtering)
   CurrentIngredientIdsProvider._()
     : super(
@@ -268,15 +268,15 @@ final class CurrentIngredientIdsProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<String>> $createElement(
+  $StreamProviderElement<List<String>> $createElement(
     $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  ) => $StreamProviderElement(pointer);
 
   @override
-  FutureOr<List<String>> create(Ref ref) {
+  Stream<List<String>> create(Ref ref) {
     return currentIngredientIds(ref);
   }
 }
 
 String _$currentIngredientIdsHash() =>
-    r'813dc47633f5eda57b0a2aae46bab5f8249b0f35';
+    r'2253f839ecb93ed223d58734b2e4e7df07b8e48f';

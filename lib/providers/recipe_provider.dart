@@ -38,36 +38,44 @@ Stream<List<Recipe>> searchRecipes(Ref ref, String query) {
 
 /// Recipes that can be made with current ingredients
 @riverpod
-Future<List<Recipe>> recipesWithCurrentIngredients(Ref ref) async {
+Stream<List<Recipe>> recipesWithCurrentIngredients(Ref ref) async* {
   final user = ref.watch(currentUserProvider);
   if (user == null) {
-    return [];
+    yield [];
+    return;
   }
 
   final service = ref.watch(recipeServiceProvider);
-  final currentIngredients = await ref.watch(
-    currentIngredientIdsProvider.future,
-  );
+  final currentIngredientsStream = ref.watch(currentIngredientIdsProvider);
+  
+  if (currentIngredientsStream.value == null) {
+    yield [];
+    return;
+  }
 
-  return service.getRecipesWithCurrentIngredients(user.uid, currentIngredients);
+  yield* service.getRecipesWithCurrentIngredients(user.uid, currentIngredientsStream.value!);
 }
 
 /// Recipes with 1-2 missing ingredients
 @riverpod
-Future<List<Recipe>> recipesWithFewMissingIngredients(Ref ref) async {
+Stream<List<Recipe>> recipesWithFewMissingIngredients(Ref ref) async* {
   final user = ref.watch(currentUserProvider);
   if (user == null) {
-    return [];
+    yield [];
+    return;
   }
 
   final service = ref.watch(recipeServiceProvider);
-  final currentIngredients = await ref.watch(
-    currentIngredientIdsProvider.future,
-  );
+  final currentIngredientsStream = ref.watch(currentIngredientIdsProvider);
+  
+  if (currentIngredientsStream.value == null) {
+    yield [];
+    return;
+  }
 
-  return service.getRecipesWithFewMissingIngredients(
+  yield* service.getRecipesWithFewMissingIngredients(
     user.uid,
-    currentIngredients,
+    currentIngredientsStream.value!,
   );
 }
 

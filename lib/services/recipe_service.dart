@@ -176,51 +176,67 @@ class RecipeService {
   }
 
   /// Filter recipes that can be made with current ingredients
-  Future<List<Recipe>> getRecipesWithCurrentIngredients(
+  Stream<List<Recipe>> getRecipesWithCurrentIngredients(
     String userId,
     List<String> currentIngredientIds,
-  ) async {
-    final snapshot = await _firestore
+  ) {
+    // If the user has no ingredients, they can't make any recipes
+    if (currentIngredientIds.isEmpty) return Stream.value([]);
+
+    return _firestore
         .collection('recipes')
         .where('userId', isEqualTo: userId)
-        .get();
+        .snapshots()
+        .map((snapshot) {
+      final allRecipes = snapshot.docs
+          .map((doc) => Recipe.fromFirestore(doc))
+          .toList();
 
-    final allRecipes = snapshot.docs
-        .map((doc) => Recipe.fromFirestore(doc))
-        .toList();
+      return allRecipes.where((recipe) {
+        // Skip recipes with no ingredients
+        if (recipe.ingredientIds.isEmpty) return false;
 
-    return allRecipes.where((recipe) {
-      // Check if all recipe ingredients are in user's current ingredients
-      return recipe.ingredientIds.every(
-        (ingredientId) => currentIngredientIds.contains(ingredientId),
-      );
-    }).toList();
+        // Check if all recipe ingredients are in user's current ingredients
+        return recipe.ingredientIds.every(
+          (ingredientId) => currentIngredientIds.contains(ingredientId),
+        );
+      }).toList();
+    }).handleError((e) {
+      debugPrint('Error fetching recipes: $e');
+      // If we get a permission denied error or other error, return empty list
+      // instead of crashing the UI
+      return <Recipe>[];
+    });
   }
 
   /// Get recipes that need 1-2 additional ingredients
-  Future<List<Recipe>> getRecipesWithFewMissingIngredients(
+  Stream<List<Recipe>> getRecipesWithFewMissingIngredients(
     String userId,
     List<String> currentIngredientIds,
-  ) async {
-    final snapshot = await _firestore
+  ) {
+    return _firestore
         .collection('recipes')
         .where('userId', isEqualTo: userId)
-        .get();
-
-    final allRecipes = snapshot.docs
-        .map((doc) => Recipe.fromFirestore(doc))
-        .toList();
-
-    return allRecipes.where((recipe) {
-      final missingIngredients = recipe.ingredientIds
-          .where((id) => !currentIngredientIds.contains(id))
+        .snapshots()
+        .map((snapshot) {
+      final allRecipes = snapshot.docs
+          .map((doc) => Recipe.fromFirestore(doc))
           .toList();
 
-      // Return recipes missing 1 or 2 ingredients
-      return missingIngredients.isNotEmpty &&
-          missingIngredients.length <= 2 &&
-          recipe.ingredientIds.length > missingIngredients.length;
-    }).toList();
+      return allRecipes.where((recipe) {
+        final missingIngredients = recipe.ingredientIds
+            .where((id) => !currentIngredientIds.contains(id))
+            .toList();
+
+        // Return recipes missing 1 or 2 ingredients
+        return missingIngredients.isNotEmpty &&
+            missingIngredients.length <= 2 &&
+            recipe.ingredientIds.length > missingIngredients.length;
+      }).toList();
+    }).handleError((e) {
+      debugPrint('Error fetching missing ingredient recipes: $e');
+      return <Recipe>[];
+    });
   }
 
   /// Get missing ingredients for a recipe

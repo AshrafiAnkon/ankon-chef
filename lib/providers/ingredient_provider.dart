@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../services/ingredient_service.dart';
 import '../models/ingredient_model.dart';
 import 'auth_provider.dart';
+import 'pantry_provider.dart';
 
 part 'ingredient_provider.g.dart';
 
@@ -49,14 +50,17 @@ Stream<List<UserIngredient>> currentUserIngredients(Ref ref) {
 
 /// Current ingredient IDs provider (for filtering)
 @riverpod
-Future<List<String>> currentIngredientIds(Ref ref) async {
-  final ingredientsAsync = ref.watch(currentUserIngredientsProvider);
-  
-  if (ingredientsAsync.value == null) {
-    final initial = await ref.watch(currentUserIngredientsProvider.future);
-    return initial.map((i) => i.ingredientId).toList();
+Stream<List<String>> currentIngredientIds(Ref ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) {
+    return Stream.value([]);
   }
-  
-  return ingredientsAsync.value!.map((i) => i.ingredientId).toList();
+
+  final pantryItemsAsync = ref.watch(pantryItemsProvider);
+  if (pantryItemsAsync.value == null) {
+    return Stream.value([]);
+  }
+
+  return Stream.value(pantryItemsAsync.value!.map((item) => item.ingredientId).toList());
 }
 

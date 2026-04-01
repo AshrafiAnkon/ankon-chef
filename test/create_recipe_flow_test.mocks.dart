@@ -206,7 +206,7 @@ class MockRecipeService extends _i1.Mock implements _i3.RecipeService {
           as _i4.Stream<List<_i5.Recipe>>);
 
   @override
-  _i4.Future<List<_i5.Recipe>> getRecipesWithCurrentIngredients(
+  _i4.Stream<List<_i5.Recipe>> getRecipesWithCurrentIngredients(
     String? userId,
     List<String>? currentIngredientIds,
   ) =>
@@ -215,12 +215,12 @@ class MockRecipeService extends _i1.Mock implements _i3.RecipeService {
               userId,
               currentIngredientIds,
             ]),
-            returnValue: _i4.Future<List<_i5.Recipe>>.value(<_i5.Recipe>[]),
+            returnValue: _i4.Stream<List<_i5.Recipe>>.empty(),
           )
-          as _i4.Future<List<_i5.Recipe>>);
+          as _i4.Stream<List<_i5.Recipe>>);
 
   @override
-  _i4.Future<List<_i5.Recipe>> getRecipesWithFewMissingIngredients(
+  _i4.Stream<List<_i5.Recipe>> getRecipesWithFewMissingIngredients(
     String? userId,
     List<String>? currentIngredientIds,
   ) =>
@@ -229,9 +229,9 @@ class MockRecipeService extends _i1.Mock implements _i3.RecipeService {
               userId,
               currentIngredientIds,
             ]),
-            returnValue: _i4.Future<List<_i5.Recipe>>.value(<_i5.Recipe>[]),
+            returnValue: _i4.Stream<List<_i5.Recipe>>.empty(),
           )
-          as _i4.Future<List<_i5.Recipe>>);
+          as _i4.Stream<List<_i5.Recipe>>);
 
   @override
   List<String> getMissingIngredients(
@@ -315,6 +315,16 @@ class MockIngredientService extends _i1.Mock implements _i10.IngredientService {
           as _i4.Stream<List<_i11.Ingredient>>);
 
   @override
+  _i4.Future<List<_i11.Ingredient>> getAllIngredientsFuture() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllIngredientsFuture, []),
+            returnValue: _i4.Future<List<_i11.Ingredient>>.value(
+              <_i11.Ingredient>[],
+            ),
+          )
+          as _i4.Future<List<_i11.Ingredient>>);
+
+  @override
   _i4.Stream<List<_i11.Ingredient>> getIngredientsByCategory(
     String? category,
   ) =>
@@ -332,6 +342,19 @@ class MockIngredientService extends _i1.Mock implements _i10.IngredientService {
               _i7.dummyValue<String>(
                 this,
                 Invocation.method(#addIngredient, [name, category]),
+              ),
+            ),
+          )
+          as _i4.Future<String>);
+
+  @override
+  _i4.Future<String> getOrCreateIngredient(String? name, String? category) =>
+      (super.noSuchMethod(
+            Invocation.method(#getOrCreateIngredient, [name, category]),
+            returnValue: _i4.Future<String>.value(
+              _i7.dummyValue<String>(
+                this,
+                Invocation.method(#getOrCreateIngredient, [name, category]),
               ),
             ),
           )

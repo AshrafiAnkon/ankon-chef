@@ -195,9 +195,9 @@ final class RecipesWithCurrentIngredientsProvider
         $FunctionalProvider<
           AsyncValue<List<Recipe>>,
           List<Recipe>,
-          FutureOr<List<Recipe>>
+          Stream<List<Recipe>>
         >
-    with $FutureModifier<List<Recipe>>, $FutureProvider<List<Recipe>> {
+    with $FutureModifier<List<Recipe>>, $StreamProvider<List<Recipe>> {
   /// Recipes that can be made with current ingredients
   RecipesWithCurrentIngredientsProvider._()
     : super(
@@ -215,18 +215,18 @@ final class RecipesWithCurrentIngredientsProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<Recipe>> $createElement(
+  $StreamProviderElement<List<Recipe>> $createElement(
     $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  ) => $StreamProviderElement(pointer);
 
   @override
-  FutureOr<List<Recipe>> create(Ref ref) {
+  Stream<List<Recipe>> create(Ref ref) {
     return recipesWithCurrentIngredients(ref);
   }
 }
 
 String _$recipesWithCurrentIngredientsHash() =>
-    r'cd7a8b36fabf31cedd98f7c6b28a30e1cd407ad5';
+    r'8a365a7c50b4830b93c3bdc5b4f99ecbf4ab5ab9';
 
 /// Recipes with 1-2 missing ingredients
 
@@ -241,9 +241,9 @@ final class RecipesWithFewMissingIngredientsProvider
         $FunctionalProvider<
           AsyncValue<List<Recipe>>,
           List<Recipe>,
-          FutureOr<List<Recipe>>
+          Stream<List<Recipe>>
         >
-    with $FutureModifier<List<Recipe>>, $FutureProvider<List<Recipe>> {
+    with $FutureModifier<List<Recipe>>, $StreamProvider<List<Recipe>> {
   /// Recipes with 1-2 missing ingredients
   RecipesWithFewMissingIngredientsProvider._()
     : super(
@@ -261,18 +261,18 @@ final class RecipesWithFewMissingIngredientsProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<Recipe>> $createElement(
+  $StreamProviderElement<List<Recipe>> $createElement(
     $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  ) => $StreamProviderElement(pointer);
 
   @override
-  FutureOr<List<Recipe>> create(Ref ref) {
+  Stream<List<Recipe>> create(Ref ref) {
     return recipesWithFewMissingIngredients(ref);
   }
 }
 
 String _$recipesWithFewMissingIngredientsHash() =>
-    r'f6abcd1811003dc59d1623ff05c6f48f8e4b7152';
+    r'bfd15f95b758e8bd50c5ccb30989199e1fb34621';
 
 /// Get recipe by ID
 
