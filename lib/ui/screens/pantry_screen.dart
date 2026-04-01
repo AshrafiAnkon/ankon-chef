@@ -586,7 +586,7 @@ class _AddPantryItemSheetState extends ConsumerState<_AddPantryItemSheet> {
                     onTap: () async {
                       final d = await showDatePicker(
                         context: context,
-                        initialDate: DateTime.now().add(const Duration(days: 7)),
+                        initialDate: _expiryDate ?? DateTime.now().add(const Duration(days: 7)),
                         firstDate: DateTime.now(),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                         builder: (ctx, child) => Theme(
@@ -607,11 +607,18 @@ class _AddPantryItemSheetState extends ConsumerState<_AddPantryItemSheet> {
                         children: [
                           const Icon(Icons.calendar_today, color: AppColors.primary, size: 20),
                           const SizedBox(width: 12),
-                          Text(
-                            _expiryDate != null ? DateFormat('MMM d, y').format(_expiryDate!) : 'Set expiry date',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: _expiryDate != null ? AppColors.onBackground : AppColors.outline),
+                          Expanded(
+                            child: Text(
+                              _expiryDate != null ? DateFormat('MMM d, y').format(_expiryDate!) : 'Set expiry date (Optional)',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: _expiryDate != null ? AppColors.onBackground : AppColors.outline),
+                            ),
                           ),
+                          if (_expiryDate != null)
+                            GestureDetector(
+                              onTap: () => setState(() => _expiryDate = null),
+                              child: const Icon(Icons.close, color: AppColors.outline, size: 20),
+                            ),
                         ],
                       ),
                     ),
@@ -784,8 +791,15 @@ class _EditPantryItemSheetState extends ConsumerState<_EditPantryItemSheet> {
                         children: [
                           const Icon(Icons.calendar_today, color: AppColors.primary, size: 20),
                           const SizedBox(width: 12),
-                          Text(_expiryDate != null ? 'Expires: ${DateFormat('MMM d, y').format(_expiryDate!)}' : 'Set expiry date',
-                              style: AppTextStyles.bodyMedium.copyWith(color: _expiryDate != null ? AppColors.onBackground : AppColors.outline)),
+                          Expanded(
+                            child: Text(_expiryDate != null ? 'Expires: ${DateFormat('MMM d, y').format(_expiryDate!)}' : 'Set expiry date (Optional)',
+                                style: AppTextStyles.bodyMedium.copyWith(color: _expiryDate != null ? AppColors.onBackground : AppColors.outline)),
+                          ),
+                          if (_expiryDate != null)
+                            GestureDetector(
+                              onTap: () => setState(() => _expiryDate = null),
+                              child: const Icon(Icons.close, color: AppColors.outline, size: 20),
+                            ),
                         ],
                       ),
                     ),

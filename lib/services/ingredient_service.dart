@@ -17,6 +17,14 @@ class IngredientService {
         );
   }
 
+  /// Get all ingredients from master list as a Future
+  Future<List<Ingredient>> getAllIngredientsFuture() async {
+    final snapshot = await _firestore.collection('ingredients').get();
+    final ingredients = snapshot.docs.map((doc) => Ingredient.fromFirestore(doc)).toList();
+    ingredients.sort((a, b) => a.name.compareTo(b.name));
+    return ingredients;
+  }
+
   /// Get ingredients by category
   Stream<List<Ingredient>> getIngredientsByCategory(String category) {
     return _firestore

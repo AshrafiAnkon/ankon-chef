@@ -296,32 +296,88 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
       final ingredientService = ref.read(ingredientServiceProvider);
       
-      // Parallelize ingredient loading for better performance
-      final List<Future<void>> ingredientTasks = [];
+      // Fetch all existing ingredients to do smart matching
+      final allIngredients = await ingredientService.getAllIngredientsFuture();
       
+      // Parse raw ingredients, deduplicate (case-insensitive) and combine measures
+      final Map<String, String> normalizedToRawName = {};
+      final Map<String, String> normalizedToMeasure = {};
+
       for (int i = 1; i <= 20; i++) {
         final ingredientName = meal['strIngredient$i'] as String?;
         final measure = meal['strMeasure$i'] as String?;
+        
         if (ingredientName != null && ingredientName.trim().isNotEmpty) {
-          final nameTrimmed = ingredientName.trim();
+          final rawName = ingredientName.trim();
+          final key = rawName.toLowerCase();
           
-          ingredientTasks.add(() async {
-            try {
-               // Get or create the ingredient
-               final id = await ingredientService.getOrCreateIngredient(nameTrimmed, 'Imported')
-                   .timeout(const Duration(seconds: 10));
-               
-               if (mounted && !_selectedIngredientIds.contains(id)) {
-                  setState(() {
-                    _selectedIngredientIds.add(id);
-                    _quantityControllers[id] = TextEditingController(text: measure?.trim() ?? '');
-                  });
-               }
-            } catch (e) {
-               debugPrint('Error importing ingredient $nameTrimmed: $e');
+          if (!normalizedToRawName.containsKey(key)) {
+            // Capitalize first letter for a cleaner look
+            final formattedName = rawName.length > 1 
+                ? rawName[0].toUpperCase() + rawName.substring(1).toLowerCase() 
+                : rawName.toUpperCase();
+            normalizedToRawName[key] = formattedName;
+          }
+          
+          final existingMeasure = normalizedToMeasure[key] ?? '';
+          final newMeasure = measure?.trim() ?? '';
+          
+          if (newMeasure.isNotEmpty) {
+            if (existingMeasure.isNotEmpty && !existingMeasure.contains(newMeasure)) {
+              normalizedToMeasure[key] = '$existingMeasure + $newMeasure';
+            } else if (existingMeasure.isEmpty) {
+              normalizedToMeasure[key] = newMeasure;
             }
-          }());
+          }
         }
+      }
+      
+      // Parallelize ingredient loading for better performance
+      final List<Future<void>> ingredientTasks = [];
+      
+      for (final key in normalizedToRawName.keys) {
+        final nameToUse = normalizedToRawName[key]!;
+        final finalMeasure = normalizedToMeasure[key] ?? '';
+        
+        ingredientTasks.add(() async {
+          try {
+             // Smart match for predefined formats like "Butter (Makhan | মাখন)"
+             String? matchedId;
+             final searchLower = nameToUse.toLowerCase();
+             
+             for (final ing in allIngredients) {
+               final ingNameLower = ing.name.toLowerCase();
+               if (ingNameLower == searchLower || 
+                   ingNameLower.startsWith('$searchLower (') || 
+                   ingNameLower.startsWith('$searchLower ')) {
+                 matchedId = ing.id;
+                 break;
+               }
+             }
+             
+             // Get or create the ingredient
+             final id = matchedId ?? await ingredientService.getOrCreateIngredient(nameToUse, 'Imported')
+                 .timeout(const Duration(seconds: 10));
+             
+             if (mounted) {
+                setState(() {
+                  if (!_selectedIngredientIds.contains(id)) {
+                    _selectedIngredientIds.add(id);
+                    _quantityControllers[id] = TextEditingController(text: finalMeasure);
+                  } else {
+                    final currentText = _quantityControllers[id]?.text ?? '';
+                    if (currentText.isEmpty) {
+                      _quantityControllers[id]?.text = finalMeasure;
+                    } else if (finalMeasure.isNotEmpty && !currentText.contains(finalMeasure)) {
+                      _quantityControllers[id]?.text = '$currentText + $finalMeasure';
+                    }
+                  }
+                });
+             }
+          } catch (e) {
+             debugPrint('Error importing ingredient $nameToUse: $e');
+          }
+        }());
       }
       
       await Future.wait(ingredientTasks).timeout(
@@ -805,6 +861,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                                   hint: '15',
                                   unit: 'min',
                                   icon: Icons.timer_outlined,
+                                  isMandatory: true,
                                 ),
                               ),
                               const SizedBox(width: 24),
@@ -815,6 +872,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                                   hint: '20',
                                   unit: 'min',
                                   icon: Icons.local_fire_department_outlined,
+                                  isMandatory: true,
                                 ),
                               ),
                             ],
@@ -1056,6 +1114,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     required String hint,
     required String unit,
     required IconData icon,
+    bool isMandatory = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1081,6 +1140,15 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               child: TextFormField(
                 controller: controller,
                 keyboardType: TextInputType.number,
+                validator: isMandatory ? (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Required';
+                  }
+                  if (int.tryParse(value.trim()) == null) {
+                    return 'Invalid';
+                  }
+                  return null;
+                } : null,
                 style: AppTextStyles.h3.copyWith(height: 1.1),
                 decoration: InputDecoration(
                   hintText: hint,

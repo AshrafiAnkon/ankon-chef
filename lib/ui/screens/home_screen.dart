@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/recipe_provider.dart';
 import '../widgets/settings_bottom_sheet.dart';
 import '../widgets/recipe_image.dart';
 
@@ -150,15 +151,31 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends ConsumerStatefulWidget {
   final String userName;
 
   const _HomeContent({required this.userName});
 
   @override
+  ConsumerState<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends ConsumerState<_HomeContent> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // In Flutter, constraints might force bento items to collapse if not handled responsive
     int crossAxisCount = MediaQuery.of(context).size.width > 600 ? 5 : 2;
+    
+    final isSearching = _searchQuery.isNotEmpty;
     
     return SingleChildScrollView(
       padding: EdgeInsets.only(
@@ -175,7 +192,7 @@ class _HomeContent extends StatelessWidget {
             text: TextSpan(
               style: AppTextStyles.display2.copyWith(color: AppColors.onBackground, height: 1.2),
               children: [
-                TextSpan(text: 'Hi, $userName!\n'),
+                TextSpan(text: 'Hi, ${widget.userName}!\n'),
                 const TextSpan(
                   text: "What's for dinner?",
                   style: TextStyle(color: AppColors.primary),
@@ -226,9 +243,26 @@ class _HomeContent extends StatelessWidget {
           
           // Search
           TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
             decoration: InputDecoration(
               hintText: 'Search your saved recipes or browse...',
               prefixIcon: const Icon(Icons.search, color: AppColors.outline),
+              suffixIcon: _searchQuery.isNotEmpty 
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: AppColors.outline),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
               filled: true,
               fillColor: AppColors.surfaceContainerLowest,
               border: OutlineInputBorder(
@@ -245,29 +279,30 @@ class _HomeContent extends StatelessWidget {
           
           const SizedBox(height: 32),
           
-          // Bento Grid
-          GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1.0,
+          // Bento Grid (only show when not searching)
+          if (!isSearching) ...[
+            GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 1.0,
+              ),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 5,
+              itemBuilder: (context, index) {
+                if (index == 0) return _buildBentoItem(context, 'All Recipes', Icons.restaurant_menu, AppColors.surfaceContainerLowest, AppColors.primary, AppColors.onPrimary, () => context.push('/recipes'));
+                if (index == 1) return _buildBentoItem(context, 'Add New', Icons.add_circle, AppColors.primaryContainer, AppColors.onPrimaryContainer, AppColors.onPrimaryContainer, () => context.push('/recipes/create'));
+                if (index == 2) return _buildBentoItem(context, 'Manage Pantry', Icons.inventory_2, AppColors.surfaceContainerLowest, AppColors.secondary, AppColors.onSecondary, () => context.push('/pantry'));
+                if (index == 3) return _buildBentoItem(context, 'Meal Planner', Icons.calendar_month, AppColors.surfaceContainerLowest, AppColors.tertiary, AppColors.onTertiary, () => context.push('/meal-plan'));
+                return _buildBentoItem(context, 'Browse Ingredients', Icons.kitchen, AppColors.surfaceContainerLowest, AppColors.primaryDim, AppColors.onPrimary, () => context.push('/ingredients'));
+              },
             ),
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              if (index == 0) return _buildBentoItem(context, 'All Recipes', Icons.restaurant_menu, AppColors.surfaceContainerLowest, AppColors.primary, AppColors.onPrimary, () => context.push('/recipes'));
-              if (index == 1) return _buildBentoItem(context, 'Add New', Icons.add_circle, AppColors.primaryContainer, AppColors.onPrimaryContainer, AppColors.onPrimaryContainer, () => context.push('/recipes/create'));
-              if (index == 2) return _buildBentoItem(context, 'Manage Pantry', Icons.inventory_2, AppColors.surfaceContainerLowest, AppColors.secondary, AppColors.onSecondary, () => context.push('/pantry'));
-              if (index == 3) return _buildBentoItem(context, 'Meal Planner', Icons.calendar_month, AppColors.surfaceContainerLowest, AppColors.tertiary, AppColors.onTertiary, () => context.push('/meal-plan'));
-              return _buildBentoItem(context, 'Browse Ingredients', Icons.kitchen, AppColors.surfaceContainerLowest, AppColors.primaryDim, AppColors.onPrimary, () => context.push('/ingredients'));
-            },
-          ),
+            const SizedBox(height: 48),
+          ],
           
-          const SizedBox(height: 48),
-          
-          // Suggestions header
+          // Suggestions/Search header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -276,43 +311,137 @@ class _HomeContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Make it Now', style: AppTextStyles.h3),
+                    Text(isSearching ? 'Search Results' : 'Make it Now', style: AppTextStyles.h3),
                     const SizedBox(height: 4),
-                    Text('Based on items in your pantry', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onSurfaceVariant)),
+                    Text(
+                      isSearching ? 'Recipes matching "$_searchQuery"' : 'Based on items in your pantry', 
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onSurfaceVariant)
+                    ),
                   ],
                 ),
               ),
-              Text(
-                'View All Matches',
-                style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary),
-              ),
+              if (!isSearching)
+                GestureDetector(
+                  onTap: () => context.push('/recipes'),
+                  child: Text(
+                    'View All',
+                    style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary),
+                  ),
+                ),
             ],
           ),
           
           const SizedBox(height: 24),
           
           // Recipes List
-          const _RecipeCard(
-            title: 'Autumn Harvest Bowl',
-            description: 'You have all 8 ingredients! A perfect balance of sweet potato, kale, and lemon tahini.',
-            imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA7vhsSxKI8XJKaKpKEPm2wZCKVoeWH_pOexdihXpw2-eZsMoCWSHXWXT5pbyfEgugPBjiuBoxJKj1oyoxJIO4JL-m2TBYaHEMa4bSLyfqKhy-jA3-12dpVt9dhnTZSTuGOohF4_ZAJuUYbUanSNlFpdYxI5OFIuJsmxqIZn9jWzWDKTdJR6WRweNsaqq224Ps82Qk5OuzmOyNcd4uD21h12Em6HA3bYt2TYpeJ8CPaM447uCV7rVnDsQonZF7J8uvZsV6UiqMqEKc',
-            tag: 'Fresh',
-            tagColor: AppColors.secondary,
-            tagTextColor: AppColors.onSecondary,
-            time: '15m',
-          ),
-          const SizedBox(height: 24),
-          const _RecipeCard(
-            title: 'One-Pan Tomato Basil Pasta',
-            description: 'Missing: Fresh Basil (optional). Quick, easy, and only uses one pot for easy cleanup.',
-            imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCQ57WaRM2DW-EdidQK9DQhuicBJ1_a0No-gX7uF1MeDlOXcVufJvMlgMthyroM7JUi6MpNUiwv30_yoPK3ZD8l0y-4jXgJMv0WZl4vDsRE5Hi1DRhAxpE2c4uIaU5ti1WZLQy0OmRcTnazVyBGDZG-G2GKm4k5ZLaY7MulKb3df6lZaBFvZ3-OUTM6Dk6By2f5nqOGWEInBAfbYJxbkxy20QSuwvx66MQ4snQNfbonI5S0Mq9oOQX-Nto0MoXlUcTMsolqM76Ncto',
-            tag: 'Pantry Favorite',
-            tagColor: AppColors.primaryContainer,
-            tagTextColor: AppColors.onPrimaryContainer,
-            time: '20m',
-          ),
+          if (isSearching)
+            _buildSearchResults(ref)
+          else
+            _buildMakeItNowResults(ref),
         ],
       ),
+    );
+  }
+
+  Widget _buildSearchResults(WidgetRef ref) {
+    final searchAsync = ref.watch(searchRecipesProvider(_searchQuery));
+    
+    return searchAsync.when(
+      data: (recipes) {
+        if (recipes.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Text(
+                'No recipes found matching "$_searchQuery"',
+                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+        
+        return Column(
+          children: recipes.map((recipe) => Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: _RecipeCard(
+              title: recipe.name,
+              description: recipe.instructions.length > 100 
+                  ? '${recipe.instructions.substring(0, 100)}...' 
+                  : recipe.instructions,
+              imageUrl: recipe.imageUrl,
+              tag: recipe.tags.isNotEmpty ? recipe.tags.first : 'Recipe',
+              tagColor: AppColors.primaryContainer,
+              tagTextColor: AppColors.onPrimaryContainer,
+              time: '${(recipe.prepTime ?? 0) + (recipe.cookTime ?? 0)}m',
+              onCookNow: () => context.push('/recipes/${recipe.id}'),
+              isFavorite: recipe.isFavorite,
+              onBookmark: () {
+                ref.read(recipeServiceProvider).toggleFavorite(recipe.id, !recipe.isFavorite);
+              },
+            ),
+          )).toList(),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
+    );
+  }
+
+  Widget _buildMakeItNowResults(WidgetRef ref) {
+    final makeItNowAsync = ref.watch(recipesWithCurrentIngredientsProvider);
+    
+    return makeItNowAsync.when(
+      data: (recipes) {
+        if (recipes.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                children: [
+                  const Icon(Icons.kitchen, size: 48, color: AppColors.outline),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Add more ingredients to your pantry to see recommendations here.',
+                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.push('/pantry'),
+                    child: const Text('Update Pantry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // Show up to 3 recommendations
+        final displayRecipes = recipes.take(3).toList();
+        
+        return Column(
+          children: displayRecipes.map((recipe) => Padding(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: _RecipeCard(
+              title: recipe.name,
+              description: 'You have the ingredients for this! ${recipe.instructions.length > 60 ? '${recipe.instructions.substring(0, 60)}...' : recipe.instructions}',
+              imageUrl: recipe.imageUrl,
+              tag: 'Ready to Cook',
+              tagColor: AppColors.secondary,
+              tagTextColor: AppColors.onSecondary,
+              time: '${(recipe.prepTime ?? 0) + (recipe.cookTime ?? 0)}m',
+              onCookNow: () => context.push('/recipes/${recipe.id}'),
+              isFavorite: recipe.isFavorite,
+              onBookmark: () {
+                ref.read(recipeServiceProvider).toggleFavorite(recipe.id, !recipe.isFavorite);
+              },
+            ),
+          )).toList(),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
 
@@ -361,20 +490,26 @@ class _HomeContent extends StatelessWidget {
 class _RecipeCard extends StatelessWidget {
   final String title;
   final String description;
-  final String imageUrl;
+  final String? imageUrl;
   final String tag;
   final Color tagColor;
   final Color tagTextColor;
   final String time;
+  final VoidCallback onCookNow;
+  final VoidCallback onBookmark;
+  final bool isFavorite;
 
   const _RecipeCard({
     required this.title,
     required this.description,
-    required this.imageUrl,
+    this.imageUrl,
     required this.tag,
     required this.tagColor,
     required this.tagTextColor,
     required this.time,
+    required this.onCookNow,
+    required this.onBookmark,
+    this.isFavorite = false,
   });
 
   @override
@@ -470,7 +605,7 @@ class _RecipeCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: onCookNow,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.onPrimary,
@@ -495,8 +630,11 @@ class _RecipeCard extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.bookmark, color: AppColors.primary),
-                        onPressed: () {},
+                        icon: Icon(
+                          isFavorite ? Icons.bookmark : Icons.bookmark_border, 
+                          color: AppColors.primary
+                        ),
+                        onPressed: onBookmark,
                       ),
                     ),
                   ],

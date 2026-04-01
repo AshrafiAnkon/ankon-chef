@@ -336,6 +336,15 @@ class _IngredientCard extends ConsumerStatefulWidget {
 
 class _IngredientCardState extends ConsumerState<_IngredientCard> {
   bool _adding = false;
+  final _amountController = TextEditingController();
+  final _unitController = TextEditingController(text: 'pcs');
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _unitController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -410,28 +419,74 @@ class _IngredientCardState extends ConsumerState<_IngredientCard> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _adding ? null : _quickAddToPantry,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      disabledBackgroundColor: AppColors.secondary,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                      elevation: 0,
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.outlineVariant.withAlpha(60)),
+                        ),
+                        child: TextField(
+                          controller: _amountController,
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            hintText: 'Amount',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            isDense: true,
+                          ),
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                      ),
                     ),
-                    child: _adding
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                              const SizedBox(width: 8),
-                              Text('Added!', style: AppTextStyles.labelLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ],
-                          )
-                        : Text('+ Add to Pantry', style: AppTextStyles.labelLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.outlineVariant.withAlpha(60)),
+                        ),
+                        child: TextField(
+                          controller: _unitController,
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            hintText: 'Unit',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            isDense: true,
+                          ),
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 4,
+                      child: ElevatedButton(
+                        onPressed: (_adding || _amountController.text.trim().isEmpty || _unitController.text.trim().isEmpty) ? null : _quickAddToPantry,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          disabledBackgroundColor: AppColors.secondary.withAlpha(100),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: _adding
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : Text('+ Pantry', style: AppTextStyles.labelLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -442,6 +497,9 @@ class _IngredientCardState extends ConsumerState<_IngredientCard> {
   }
 
   Future<void> _quickAddToPantry() async {
+    final amount = double.tryParse(_amountController.text.trim());
+    if (amount == null || amount <= 0) return;
+
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
@@ -451,13 +509,25 @@ class _IngredientCardState extends ConsumerState<_IngredientCard> {
     await svc.addPantryItem(
       userId: user.uid,
       ingredientId: widget.ingredient.id,
-      amount: 1,
-      unit: 'pcs',
+      amount: amount,
+      unit: _unitController.text.trim(),
       expiryDate: null,
     );
 
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) setState(() => _adding = false);
+    await Future.delayed(const Duration(seconds: 1));
+    if (mounted) {
+      setState(() {
+        _adding = false;
+        _amountController.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${widget.ingredient.name} added to pantry!'),
+          backgroundColor: AppColors.secondary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Color _categoryColor(String cat) {

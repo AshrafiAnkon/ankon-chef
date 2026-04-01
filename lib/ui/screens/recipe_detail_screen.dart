@@ -217,7 +217,7 @@ class RecipeDetailScreen extends ConsumerWidget {
           _buildStatDivider(),
           _buildStatItem(Icons.local_fire_department_outlined, '${recipe.cookTime ?? 0}m', 'Cook'),
           _buildStatDivider(),
-          _buildStatItem(Icons.bolt_outlined, '${recipe.calories ?? 0}', 'Kcal'),
+          _buildStatItem(Icons.bolt_outlined, '${recipe.calories ?? 0} kcal', 'Est. Calories'),
         ],
       ),
     );
@@ -296,6 +296,8 @@ class _RecipeYoutubePlayerState extends State<RecipeYoutubePlayer> {
         flags: const YoutubePlayerFlags(
           autoPlay: false,
           mute: false,
+          forceHD: false,
+          enableCaption: false,
         ),
       );
     } else {
