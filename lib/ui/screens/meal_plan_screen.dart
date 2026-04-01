@@ -816,8 +816,11 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _SelectRecipesBottomSheet(
-        selectedDate: _selectedDate,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: _SelectRecipesBottomSheet(
+          selectedDate: _selectedDate,
+        ),
       ),
     );
   }
@@ -1097,12 +1100,13 @@ class _SelectRecipesBottomSheetState
     final recipesAsync = ref.watch(userRecipesProvider);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Handle bar
           const SizedBox(height: 12),
@@ -1194,7 +1198,7 @@ class _SelectRecipesBottomSheetState
           const SizedBox(height: 16),
 
           // Recipe list
-          Expanded(
+          Flexible(
             child: recipesAsync.when(
               data: (recipes) {
                 final filteredRecipes = recipes.where((r) => 

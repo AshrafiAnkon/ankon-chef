@@ -337,7 +337,7 @@ class _IngredientCard extends ConsumerStatefulWidget {
 class _IngredientCardState extends ConsumerState<_IngredientCard> {
   bool _adding = false;
   final _amountController = TextEditingController();
-  final _unitController = TextEditingController(text: 'pcs');
+  final _unitController = TextEditingController();
 
   @override
   void dispose() {
@@ -455,11 +455,30 @@ class _IngredientCardState extends ConsumerState<_IngredientCard> {
                         child: TextField(
                           controller: _unitController,
                           onChanged: (_) => setState(() {}),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: 'Unit',
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             isDense: true,
+                            suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            suffixIcon: PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.arrow_drop_down, color: AppColors.outline),
+                              onSelected: (String value) {
+                                _unitController.text = value;
+                                setState(() {});
+                              },
+                              itemBuilder: (BuildContext context) {
+                                return ['kg', 'gm', 'pcs', 'litre', 'ml', 'tbsp', 'tsp', 'cup']
+                                    .map((String choice) {
+                                  return PopupMenuItem<String>(
+                                    value: choice,
+                                    height: 36,
+                                    child: Text(choice, style: AppTextStyles.bodyMedium),
+                                  );
+                                }).toList();
+                              },
+                            ),
                           ),
                           style: AppTextStyles.bodyMedium,
                         ),

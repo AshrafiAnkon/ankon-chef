@@ -255,7 +255,10 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _AddPantryItemSheet(),
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: const _AddPantryItemSheet(),
+      ),
     );
   }
 
@@ -264,7 +267,10 @@ class _PantryScreenState extends ConsumerState<PantryScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EditPantryItemSheet(item: item),
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: _EditPantryItemSheet(item: item),
+      ),
     );
   }
 
@@ -492,12 +498,15 @@ class _AddPantryItemSheetState extends ConsumerState<_AddPantryItemSheet> {
     final ingredientsAsync = ref.watch(allIngredientsProvider);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 12),
           Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.outlineVariant, borderRadius: BorderRadius.circular(2))),
@@ -516,7 +525,7 @@ class _AddPantryItemSheetState extends ConsumerState<_AddPantryItemSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          Expanded(
+          Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -701,9 +710,12 @@ class _EditPantryItemSheetState extends ConsumerState<_EditPantryItemSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.6,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 12),
           Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.outlineVariant, borderRadius: BorderRadius.circular(2))),
@@ -722,7 +734,7 @@ class _EditPantryItemSheetState extends ConsumerState<_EditPantryItemSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          Expanded(
+          Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(

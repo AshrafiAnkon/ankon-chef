@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../providers/recipe_provider.dart';
@@ -183,8 +183,9 @@ class RecipeDetailScreen extends ConsumerWidget {
                               recipe.isFavorite ? Icons.favorite : Icons.favorite_border,
                               color: AppColors.primary,
                             ),
-                            onPressed: () {
-                              ref.read(recipeServiceProvider).toggleFavorite(recipe.id, !recipe.isFavorite);
+                            onPressed: () async {
+                              await ref.read(recipeServiceProvider).toggleFavorite(recipe.id, !recipe.isFavorite);
+                              ref.invalidate(recipeByIdProvider(recipe.id));
                             },
                           ),
                         ],
@@ -289,14 +290,27 @@ class _RecipeYoutubePlayerState extends State<RecipeYoutubePlayer> {
   @override
   void initState() {
     super.initState();
-    final videoId = YoutubePlayer.convertUrlToId(widget.youtubeUrl);
-    if (videoId != null) {
-      _controller = YoutubePlayerController(
-        initialVideoId: videoId,
-        flags: const YoutubePlayerFlags(
-          autoPlay: false,
+    
+    String? videoId;
+    try {
+      final uri = Uri.parse(widget.youtubeUrl);
+      if (uri.host.contains('youtu.be')) {
+        videoId = uri.pathSegments.first;
+      } else if (uri.host.contains('youtube.com')) {
+        videoId = uri.queryParameters['v'];
+      }
+    } catch (_) {
+      videoId = null;
+    }
+
+    if (videoId != null && videoId.isNotEmpty) {
+      _controller = YoutubePlayerController.fromVideoId(
+        videoId: videoId,
+        autoPlay: false,
+        params: const YoutubePlayerParams(
+          showControls: true,
+          showFullscreenButton: true,
           mute: false,
-          forceHD: false,
           enableCaption: false,
         ),
       );
@@ -308,7 +322,7 @@ class _RecipeYoutubePlayerState extends State<RecipeYoutubePlayer> {
   @override
   void dispose() {
     if (!_isInitError) {
-      _controller.dispose();
+      _controller.close();
     }
     super.dispose();
   }
@@ -326,14 +340,9 @@ class _RecipeYoutubePlayerState extends State<RecipeYoutubePlayer> {
       );
     }
 
-    return YoutubePlayerBuilder(
-        player: YoutubePlayer(
-          controller: _controller,
-          showVideoProgressIndicator: true,
-          progressIndicatorColor: AppColors.primary,
-        ),
-        builder: (context, player) {
-          return player;
-        });
+    return YoutubePlayer(
+      controller: _controller,
+      aspectRatio: 16 / 9,
+    );
   }
 }

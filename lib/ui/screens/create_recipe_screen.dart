@@ -470,22 +470,25 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AnimatedBuilder(
-        animation: Listenable.merge([_isSearchingNotifier, _searchResultsNotifier]),
-        builder: (context, _) {
-          final isSearching = _isSearchingNotifier.value;
-          final searchResults = _searchResultsNotifier.value;
-          
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.85,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_isSearchingNotifier, _searchResultsNotifier]),
+          builder: (context, _) {
+            final isSearching = _isSearchingNotifier.value;
+            final searchResults = _searchResultsNotifier.value;
+            
+            return Container(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -552,7 +555,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                 ),
 
                 const SizedBox(height: 32),
-                Expanded(
+                Flexible(
                   child: isSearching
                       ? const Center(child: CircularProgressIndicator())
                       : searchResults.isEmpty
@@ -681,6 +684,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }
