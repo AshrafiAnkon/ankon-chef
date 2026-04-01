@@ -137,6 +137,13 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
   Future<void> _saveRecipe() async {
     if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields correctly.'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
       return;
     }
 
@@ -1133,8 +1140,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
         ),
         const SizedBox(height: 8),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: TextFormField(
@@ -1157,14 +1163,18 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                     color: AppColors.onSurfaceVariant.withAlpha(50),
                   ),
                   isDense: true,
+                  errorStyle: AppTextStyles.labelSmall.copyWith(color: AppColors.error),
                 ),
               ),
             ),
             const SizedBox(width: 4),
-            Text(
-              unit,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.onSurfaceVariant,
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                unit,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
             ),
           ],
