@@ -52,12 +52,11 @@ Stream<List<UserIngredient>> currentUserIngredients(Ref ref) {
 Future<List<String>> currentIngredientIds(Ref ref) async {
   final ingredientsAsync = ref.watch(currentUserIngredientsProvider);
   
-  return ingredientsAsync.when(
-    data: (ingredients) => ingredients.map((i) => i.ingredientId).toList(),
-    loading: () => ref.watch(currentUserIngredientsProvider.future).then(
-      (list) => list.map((i) => i.ingredientId).toList(),
-    ),
-    error: (e, _) => [],
-  );
+  if (ingredientsAsync.value == null) {
+    final initial = await ref.watch(currentUserIngredientsProvider.future);
+    return initial.map((i) => i.ingredientId).toList();
+  }
+  
+  return ingredientsAsync.value!.map((i) => i.ingredientId).toList();
 }
 

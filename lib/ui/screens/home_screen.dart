@@ -425,7 +425,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
             padding: const EdgeInsets.only(bottom: 24.0),
             child: _RecipeCard(
               title: recipe.name,
-              description: 'You have the ingredients for this! ${recipe.instructions.length > 60 ? '${recipe.instructions.substring(0, 60)}...' : recipe.instructions}',
+              description: recipe.instructions.length > 80 ? '${recipe.instructions.substring(0, 80)}...' : recipe.instructions,
               imageUrl: recipe.imageUrl,
               tag: 'Ready to Cook',
               tagColor: AppColors.secondary,
