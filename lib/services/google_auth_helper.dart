@@ -3,7 +3,8 @@ import 'google_auth_interface.dart';
 // Conditional imports to select the correct implementation at compile time
 import 'google_auth_stub.dart'
     if (dart.library.io) 'google_auth_mobile.dart'
-    if (dart.library.html) 'google_auth_web.dart';
+    if (dart.library.html) 'google_auth_web.dart'
+    if (dart.library.js_interop) 'google_auth_web.dart';
 
 /// Helper class that exposes platform-specific Google Auth logic.
 /// This acts as a facade, ensuring the google_sign_in plugin is not imported on Web.

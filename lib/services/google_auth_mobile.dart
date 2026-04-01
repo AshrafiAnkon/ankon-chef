@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'google_auth_interface.dart';
@@ -6,6 +8,13 @@ import 'google_auth_interface.dart';
 class GoogleAuthImplementation implements GoogleAuthPlatform {
   @override
   Future<UserCredential?> signIn(FirebaseAuth auth) async {
+    // Fallback for unsupported desktop platforms during development
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+      print('Google Sign-In is not supported on Windows/Linux natively.');
+      print('Falling back to Anonymous sign-in for development purposes.');
+      return await auth.signInAnonymously();
+    }
+
     // google_sign_in 7.0+ uses singleton instance and initial authentication
     final googleUser = await GoogleSignIn.instance.authenticate();
 
@@ -30,6 +39,10 @@ class GoogleAuthImplementation implements GoogleAuthPlatform {
 
   @override
   Future<void> signOut(FirebaseAuth auth) async {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+      // Nothing to sign out from Google plugin on unsupported platforms
+      return;
+    }
     await GoogleSignIn.instance.signOut();
   }
 }
