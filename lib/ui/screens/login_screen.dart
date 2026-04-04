@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../providers/auth_provider.dart';
@@ -41,13 +42,16 @@ class LoginScreen extends ConsumerWidget {
               ),
             ),
           ),
-          
+
           // Main layout
           if (isDesktop)
             Row(
               children: [
                 Expanded(flex: 7, child: _buildHeroSection(context, isDesktop)),
-                Expanded(flex: 5, child: _buildContentSection(context, authService, isDesktop)),
+                Expanded(
+                  flex: 5,
+                  child: _buildContentSection(context, authService, isDesktop),
+                ),
               ],
             )
           else
@@ -118,7 +122,11 @@ class LoginScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContentSection(BuildContext context, dynamic authService, bool isDesktop) {
+  Widget _buildContentSection(
+    BuildContext context,
+    dynamic authService,
+    bool isDesktop,
+  ) {
     return Container(
       color: AppColors.surface,
       padding: EdgeInsets.symmetric(
@@ -151,15 +159,24 @@ class LoginScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          
+
           if (!isDesktop) const SizedBox(height: 32),
-          
+
           RichText(
             text: TextSpan(
-              style: AppTextStyles.display2.copyWith(color: AppColors.onBackground, height: 1.1),
+              style: AppTextStyles.display2.copyWith(
+                color: AppColors.onBackground,
+                height: 1.1,
+              ),
               children: const [
                 TextSpan(text: 'Cook '),
-                TextSpan(text: 'Smarter,\n', style: TextStyle(color: AppColors.primary, fontStyle: FontStyle.italic)),
+                TextSpan(
+                  text: 'Smarter,\n',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
                 TextSpan(text: 'Every Day'),
               ],
             ),
@@ -167,11 +184,13 @@ class LoginScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Text(
             'The modern recipe vault that organizes your culinary life—from pantry to plate.',
-            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.onSurfaceVariant),
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
-          
+
           const SizedBox(height: 40),
-          
+
           ElevatedButton(
             onPressed: () async {
               try {
@@ -198,17 +217,23 @@ class LoginScreen extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.g_mobiledata, size: 32, color: Colors.blue), // Placeholder for google icon
+                const Icon(
+                  Icons.g_mobiledata,
+                  size: 32,
+                  color: Colors.blue,
+                ), // Placeholder for google icon
                 const SizedBox(width: 12),
                 Text('Sign in with Google', style: AppTextStyles.labelLarge),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              context.push('/email-login');
+            },
             style: TextButton.styleFrom(
               backgroundColor: AppColors.primaryContainer.withAlpha(25),
               foregroundColor: AppColors.primary,
@@ -219,9 +244,9 @@ class LoginScreen extends ConsumerWidget {
             ),
             child: Text('Continue with Email', style: AppTextStyles.labelLarge),
           ),
-          
+
           const SizedBox(height: 48),
-          
+
           Row(
             children: [
               Expanded(
@@ -238,7 +263,12 @@ class LoginScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text('Pantry Sync', style: AppTextStyles.labelMedium),
                       const SizedBox(height: 4),
-                      Text('We find recipes based on what you already have.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.onSurfaceVariant)),
+                      Text(
+                        'We find recipes based on what you already have.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -254,38 +284,66 @@ class LoginScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.calendar_month, color: AppColors.secondary),
+                      const Icon(
+                        Icons.calendar_month,
+                        color: AppColors.secondary,
+                      ),
                       const SizedBox(height: 8),
                       Text('Smart Planner', style: AppTextStyles.labelMedium),
                       const SizedBox(height: 4),
-                      Text('Auto-generate weekly menus that save time.', style: AppTextStyles.bodySmall.copyWith(color: AppColors.onSurfaceVariant)),
+                      Text(
+                        'Auto-generate weekly menus that save time.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 64),
-          
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Text('Learn more', style: AppTextStyles.labelMedium.copyWith(color: AppColors.onSurfaceVariant)),
+                  Text(
+                    'Learn more',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(width: 24),
-                  Text('Privacy Policy', style: AppTextStyles.labelMedium.copyWith(color: AppColors.onSurfaceVariant)),
+                  Text(
+                    'Privacy Policy',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
               if (isDesktop)
-                Text('© 2024 Ankon-Chef Inc.', style: AppTextStyles.labelSmall.copyWith(color: AppColors.outline)),
+                Text(
+                  '© 2024 Ankon-Chef Inc.',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.outline,
+                  ),
+                ),
             ],
           ),
           if (!isDesktop) ...[
             const SizedBox(height: 16),
-            Text('© 2024 Ankon-Chef Inc.', style: AppTextStyles.labelSmall.copyWith(color: AppColors.outline)),
-          ]
+            Text(
+              '© 2024 Ankon-Chef Inc.',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.outline,
+              ),
+            ),
+          ],
         ],
       ),
     );

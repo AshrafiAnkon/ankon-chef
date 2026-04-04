@@ -10,8 +10,6 @@ class GoogleAuthImplementation implements GoogleAuthPlatform {
   Future<UserCredential?> signIn(FirebaseAuth auth) async {
     // Fallback for unsupported desktop platforms during development
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
-      print('Google Sign-In is not supported on Windows/Linux natively.');
-      print('Falling back to Anonymous sign-in for development purposes.');
       return await auth.signInAnonymously();
     }
 
