@@ -165,19 +165,74 @@ class _EmailLoginModalState extends ConsumerState<EmailLoginModal> {
                 ),
               ),
 
-              // Title
-              Text(
-                _isSignUp ? 'Create Account' : 'Sign In',
-                style: AppTextStyles.h4.copyWith(color: AppColors.onBackground),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _isSignUp
-                    ? 'Join Ankon-Chef to start organizing your recipes'
-                    : 'Welcome back! Sign in to continue',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
+              // Title with elegant stroke border effect
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    children: [
+                      // Stroked text as border
+                      Text(
+                        _isSignUp ? 'Create Account' : 'Sign In',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 1.5
+                            ..color = AppColors.primary.withAlpha(150),
+                        ),
+                      ),
+                      // Solid text as fill
+                      Text(
+                        _isSignUp ? 'Create Account' : 'Sign In',
+                        style: AppTextStyles.h4.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Stack(
+                    children: [
+                      // Stroked text as border
+                      Text(
+                        _isSignUp
+                            ? 'Join Ankon-Chef to start organizing your recipes'
+                            : 'Welcome back! Sign in to continue',
+                        style: TextStyle(
+                          fontSize: 12,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 0.5
+                            ..color = AppColors.primary.withAlpha(80),
+                        ),
+                      ),
+                      // Solid text as fill
+                      Text(
+                        _isSignUp
+                            ? 'Join Ankon-Chef to start organizing your recipes'
+                            : 'Welcome back! Sign in to continue',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 2,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withAlpha(150),
+                          AppColors.primary.withAlpha(30),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
 
@@ -301,36 +356,60 @@ class _EmailLoginModalState extends ConsumerState<EmailLoginModal> {
                         style: AppTextStyles.labelMedium,
                       ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              // Toggle Mode Button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _isSignUp
-                        ? 'Already have an account? '
-                        : 'Don\'t have an account? ',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _toggleAuthMode,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(0, 0),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      _isSignUp ? 'Sign In' : 'Sign Up',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+              // Toggle Mode Switch
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.outline.withAlpha(64)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _isSignUp ? 'Sign Up' : 'Sign In',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: !_isSignUp
+                              ? AppColors.primary
+                              : AppColors.onSurfaceVariant,
+                          fontWeight: !_isSignUp
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Switch(
+                        value: _isSignUp,
+                        onChanged: (value) => _toggleAuthMode(),
+                        activeThumbColor: AppColors.primary,
+                        inactiveThumbColor: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Sign Up',
+                        textAlign: TextAlign.right,
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: _isSignUp
+                              ? AppColors.primary
+                              : AppColors.onSurfaceVariant,
+                          fontWeight: _isSignUp
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
