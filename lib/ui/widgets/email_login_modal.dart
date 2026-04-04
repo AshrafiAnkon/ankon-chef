@@ -6,6 +6,44 @@ import '../theme/app_text_styles.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/email_auth_helper.dart';
 
+/// Reusable widget for stacked text with stroke outline effect
+class StrokedText extends StatelessWidget {
+  final String text;
+  final TextStyle textStyle;
+  final double strokeWidth;
+  final Color strokeColor;
+  final Color fillColor;
+
+  const StrokedText({
+    super.key,
+    required this.text,
+    required this.textStyle,
+    this.strokeWidth = 1.5,
+    required this.strokeColor,
+    required this.fillColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Stroked text as border/background
+        Text(
+          text,
+          style: textStyle.copyWith(
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = strokeWidth
+              ..color = strokeColor,
+          ),
+        ),
+        // Solid text as fill
+        Text(text, style: textStyle.copyWith(color: fillColor)),
+      ],
+    );
+  }
+}
+
 class EmailLoginModal extends ConsumerStatefulWidget {
   const EmailLoginModal({super.key});
 
@@ -169,56 +207,24 @@ class _EmailLoginModalState extends ConsumerState<EmailLoginModal> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Stack(
-                    children: [
-                      // Stroked text as border
-                      Text(
-                        _isSignUp ? 'Create Account' : 'Sign In',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          foreground: Paint()
-                            ..style = PaintingStyle.stroke
-                            ..strokeWidth = 1.5
-                            ..color = AppColors.primary.withAlpha(150),
-                        ),
-                      ),
-                      // Solid text as fill
-                      Text(
-                        _isSignUp ? 'Create Account' : 'Sign In',
-                        style: AppTextStyles.h4.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
+                  StrokedText(
+                    text: _isSignUp ? 'Create Account' : 'Sign In',
+                    textStyle: AppTextStyles.h4.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    strokeWidth: 2,
+                    strokeColor: AppColors.primary,
+                    fillColor: AppColors.primaryContainer,
                   ),
                   const SizedBox(height: 12),
-                  Stack(
-                    children: [
-                      // Stroked text as border
-                      Text(
-                        _isSignUp
-                            ? 'Join Ankon-Chef to start organizing your recipes'
-                            : 'Welcome back! Sign in to continue',
-                        style: TextStyle(
-                          fontSize: 12,
-                          foreground: Paint()
-                            ..style = PaintingStyle.stroke
-                            ..strokeWidth = 0.5
-                            ..color = AppColors.primary.withAlpha(80),
-                        ),
-                      ),
-                      // Solid text as fill
-                      Text(
-                        _isSignUp
-                            ? 'Join Ankon-Chef to start organizing your recipes'
-                            : 'Welcome back! Sign in to continue',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  StrokedText(
+                    text: _isSignUp
+                        ? 'Join Ankon-Chef to start organizing your recipes'
+                        : 'Welcome back! Sign in to continue',
+                    textStyle: AppTextStyles.bodySmall,
+                    strokeWidth: 0.8,
+                    strokeColor: AppColors.primary.withAlpha(120),
+                    fillColor: AppColors.onSurfaceVariant,
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -358,53 +364,109 @@ class _EmailLoginModalState extends ConsumerState<EmailLoginModal> {
               ),
               const SizedBox(height: 16),
 
-              // Toggle Mode Switch
+              // Toggle Mode Segmented Control
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.outline.withAlpha(64)),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: AppColors.outline.withAlpha(64),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    // Sign Up Button
                     Expanded(
-                      child: Text(
-                        _isSignUp ? 'Sign Up' : 'Sign In',
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: !_isSignUp
-                              ? AppColors.primary
-                              : AppColors.onSurfaceVariant,
-                          fontWeight: !_isSignUp
-                              ? FontWeight.w600
-                              : FontWeight.w500,
+                      child: GestureDetector(
+                        onTap: _isLoading
+                            ? null
+                            : () {
+                                if (!_isSignUp) _toggleAuthMode();
+                              },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _isSignUp
+                                ? AppColors.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_add_outlined,
+                                size: 18,
+                                color: _isSignUp
+                                    ? AppColors.onPrimary
+                                    : AppColors.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Sign Up',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  color: _isSignUp
+                                      ? AppColors.onPrimary
+                                      : AppColors.onSurfaceVariant,
+                                  fontWeight: _isSignUp
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                    Transform.scale(
-                      scale: 0.8,
-                      child: Switch(
-                        value: _isSignUp,
-                        onChanged: (value) => _toggleAuthMode(),
-                        activeThumbColor: AppColors.primary,
-                        inactiveThumbColor: AppColors.onSurfaceVariant,
-                      ),
-                    ),
+                    const SizedBox(width: 4),
+                    // Sign In Button
                     Expanded(
-                      child: Text(
-                        'Sign Up',
-                        textAlign: TextAlign.right,
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: _isSignUp
-                              ? AppColors.primary
-                              : AppColors.onSurfaceVariant,
-                          fontWeight: _isSignUp
-                              ? FontWeight.w600
-                              : FontWeight.w500,
+                      child: GestureDetector(
+                        onTap: _isLoading
+                            ? null
+                            : () {
+                                if (_isSignUp) _toggleAuthMode();
+                              },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: !_isSignUp
+                                ? AppColors.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.lock_outline,
+                                size: 18,
+                                color: !_isSignUp
+                                    ? AppColors.onPrimary
+                                    : AppColors.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Sign In',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  color: !_isSignUp
+                                      ? AppColors.onPrimary
+                                      : AppColors.onSurfaceVariant,
+                                  fontWeight: !_isSignUp
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
