@@ -22,7 +22,7 @@ class AuthService {
       final UserCredential? userCredential = await GoogleAuth.signIn(_auth);
 
       if (userCredential != null && userCredential.user != null) {
-        await _createOrUpdateUserProfile(userCredential.user!);
+        await createOrUpdateUserProfile(userCredential.user!);
       }
 
       return userCredential;
@@ -32,7 +32,7 @@ class AuthService {
   }
 
   /// Create or update user profile in Firestore
-  Future<void> _createOrUpdateUserProfile(User user) async {
+  Future<void> createOrUpdateUserProfile(User user) async {
     final userDoc = _firestore.collection('users').doc(user.uid);
     final docSnapshot = await userDoc.get().timeout(
       const Duration(seconds: 10),
@@ -82,73 +82,6 @@ class AuthService {
         .doc(uid)
         .snapshots()
         .map((doc) => doc.exists ? UserModel.fromFirestore(doc) : null);
-  }
-
-  /// Sign in with email and password
-  Future<UserCredential?> signInWithEmail(String email, String password) async {
-    try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (userCredential.user != null) {
-        await _createOrUpdateUserProfile(userCredential.user!);
-      }
-
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      throw Exception(_getAuthErrorMessage(e.code));
-    } catch (e) {
-      throw Exception('Failed to sign in: $e');
-    }
-  }
-
-  /// Sign up with email and password
-  Future<UserCredential?> signUpWithEmail(
-    String email,
-    String password,
-    String displayName,
-  ) async {
-    try {
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (userCredential.user != null) {
-        await userCredential.user!.updateDisplayName(displayName);
-        await _createOrUpdateUserProfile(userCredential.user!);
-      }
-
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      throw Exception(_getAuthErrorMessage(e.code));
-    } catch (e) {
-      throw Exception('Failed to sign up: $e');
-    }
-  }
-
-  /// Get friendly error message from Firebase auth error code
-  String _getAuthErrorMessage(String code) {
-    switch (code) {
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'email-already-in-use':
-        return 'Email is already registered. Please sign in instead.';
-      case 'invalid-email':
-        return 'Invalid email address.';
-      case 'user-disabled':
-        return 'User account has been disabled.';
-      case 'user-not-found':
-        return 'Email not found. Please sign up first.';
-      case 'wrong-password':
-        return 'Incorrect password.';
-      case 'operation-not-allowed':
-        return 'Email sign-in is currently disabled.';
-      default:
-        return 'Authentication error: $code';
-    }
   }
 
   /// Sign out

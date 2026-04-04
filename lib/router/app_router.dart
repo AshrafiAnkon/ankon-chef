@@ -2,7 +2,6 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../providers/auth_provider.dart';
 import '../ui/screens/login_screen.dart';
-import '../ui/screens/email_login_screen.dart';
 import '../ui/screens/home_screen.dart';
 import '../ui/screens/recipes_screen.dart';
 import '../ui/screens/create_recipe_screen.dart';
@@ -22,9 +21,7 @@ GoRouter router(Ref ref) {
     initialLocation: '/login',
     redirect: (context, state) {
       final isLoggedIn = authState.value != null;
-      final isLoggingIn =
-          state.matchedLocation == '/login' ||
-          state.matchedLocation == '/email-login';
+      final isLoggingIn = state.matchedLocation == '/login';
 
       // Redirect to home if logged in and trying to access login
       if (isLoggedIn && isLoggingIn) {
@@ -43,11 +40,6 @@ GoRouter router(Ref ref) {
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: '/email-login',
-        name: 'email-login',
-        builder: (context, state) => const EmailLoginScreen(),
       ),
       GoRoute(
         path: '/home',

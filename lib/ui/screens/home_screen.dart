@@ -53,7 +53,10 @@ class HomeScreen extends ConsumerWidget {
               actions: [
                 IconButton(
                   padding: const EdgeInsets.only(right: 24),
-                  icon: const Icon(Icons.settings, color: AppColors.onSurfaceVariant),
+                  icon: const Icon(
+                    Icons.settings,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                   onPressed: () => showSettingsBottomSheet(context, ref),
                 ),
               ],
@@ -77,7 +80,7 @@ class HomeScreen extends ConsumerWidget {
               color: Colors.black.withAlpha(10),
               blurRadius: 24,
               offset: const Offset(0, -4),
-            )
+            ),
           ],
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
@@ -87,15 +90,43 @@ class HomeScreen extends ConsumerWidget {
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _NavBarItem(icon: Icons.home, label: 'Home', isActive: true, onTap: () {}),
-                    _NavBarItem(icon: Icons.restaurant_menu, label: 'Recipes', isActive: false, onTap: () => context.go('/recipes')),
-                    _NavBarItem(icon: Icons.inventory_2, label: 'Pantry', isActive: false, onTap: () => context.go('/pantry')),
-                    _NavBarItem(icon: Icons.calendar_month, label: 'Planner', isActive: false, onTap: () => context.go('/meal-plan')),
-                    _NavBarItem(icon: Icons.kitchen, label: 'Ingredients', isActive: false, onTap: () => context.go('/ingredients')),
+                    _NavBarItem(
+                      icon: Icons.home,
+                      label: 'Home',
+                      isActive: true,
+                      onTap: () {},
+                    ),
+                    _NavBarItem(
+                      icon: Icons.restaurant_menu,
+                      label: 'Recipes',
+                      isActive: false,
+                      onTap: () => context.go('/recipes'),
+                    ),
+                    _NavBarItem(
+                      icon: Icons.inventory_2,
+                      label: 'Pantry',
+                      isActive: false,
+                      onTap: () => context.go('/pantry'),
+                    ),
+                    _NavBarItem(
+                      icon: Icons.calendar_month,
+                      label: 'Planner',
+                      isActive: false,
+                      onTap: () => context.go('/meal-plan'),
+                    ),
+                    _NavBarItem(
+                      icon: Icons.kitchen,
+                      label: 'Ingredients',
+                      isActive: false,
+                      onTap: () => context.go('/ingredients'),
+                    ),
                   ],
                 ),
               ),
@@ -142,7 +173,9 @@ class _NavBarItem extends StatelessWidget {
             Text(
               label,
               style: AppTextStyles.labelSmall.copyWith(
-                color: isActive ? AppColors.primary : AppColors.onSurfaceVariant,
+                color: isActive
+                    ? AppColors.primary
+                    : AppColors.onSurfaceVariant,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
                 fontSize: 10,
               ),
@@ -177,9 +210,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
   Widget build(BuildContext context) {
     // In Flutter, constraints might force bento items to collapse if not handled responsive
     int crossAxisCount = MediaQuery.of(context).size.width > 600 ? 5 : 2;
-    
+
     final isSearching = _searchQuery.isNotEmpty;
-    
+
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 100,
@@ -193,7 +226,10 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
           // Greeting
           RichText(
             text: TextSpan(
-              style: AppTextStyles.display2.copyWith(color: AppColors.onBackground, height: 1.2),
+              style: AppTextStyles.display2.copyWith(
+                color: AppColors.onBackground,
+                height: 1.2,
+              ),
               children: [
                 TextSpan(text: 'Hi, ${widget.userName}!\n'),
                 const TextSpan(
@@ -204,14 +240,17 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Chips
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.secondary,
                   borderRadius: BorderRadius.circular(24),
@@ -219,31 +258,42 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.local_fire_department, color: AppColors.onSecondary, size: 16),
+                    const Icon(
+                      Icons.local_fire_department,
+                      color: AppColors.onSecondary,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Pantry 85% full',
-                      style: AppTextStyles.labelMedium.copyWith(color: AppColors.onSecondary),
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: AppColors.onSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Text(
                   'Cooking Streak: 5 Days',
-                  style: AppTextStyles.labelMedium.copyWith(color: AppColors.onSurfaceVariant),
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Search
           TextField(
             controller: _searchController,
@@ -255,7 +305,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
             decoration: InputDecoration(
               hintText: 'Search your saved recipes or browse...',
               prefixIcon: const Icon(Icons.search, color: AppColors.outline),
-              suffixIcon: _searchQuery.isNotEmpty 
+              suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear, color: AppColors.outline),
                       onPressed: () {
@@ -274,14 +324,16 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(32),
-                borderSide: const BorderSide(color: AppColors.surfaceContainerHigh),
+                borderSide: const BorderSide(
+                  color: AppColors.surfaceContainerHigh,
+                ),
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 20),
             ),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Bento Grid (only show when not searching)
           if (!isSearching) ...[
             GridView.builder(
@@ -295,16 +347,64 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: 5,
               itemBuilder: (context, index) {
-                if (index == 0) return _buildBentoItem(context, 'All Recipes', Icons.restaurant_menu, AppColors.surfaceContainerLowest, AppColors.primary, AppColors.onPrimary, () => context.push('/recipes'));
-                if (index == 1) return _buildBentoItem(context, 'Add New', Icons.add_circle, AppColors.primaryContainer, AppColors.onPrimaryContainer, AppColors.onPrimaryContainer, () => context.push('/recipes/create'));
-                if (index == 2) return _buildBentoItem(context, 'Manage Pantry', Icons.inventory_2, AppColors.surfaceContainerLowest, AppColors.secondary, AppColors.onSecondary, () => context.push('/pantry'));
-                if (index == 3) return _buildBentoItem(context, 'Meal Planner', Icons.calendar_month, AppColors.surfaceContainerLowest, AppColors.tertiary, AppColors.onTertiary, () => context.push('/meal-plan'));
-                return _buildBentoItem(context, 'Browse Ingredients', Icons.kitchen, AppColors.surfaceContainerLowest, AppColors.primaryDim, AppColors.onPrimary, () => context.push('/ingredients'));
+                if (index == 0) {
+                  return _buildBentoItem(
+                    context,
+                    'All Recipes',
+                    Icons.restaurant_menu,
+                    AppColors.surfaceContainerLowest,
+                    AppColors.primary,
+                    AppColors.onPrimary,
+                    () => context.push('/recipes'),
+                  );
+                }
+                if (index == 1) {
+                  return _buildBentoItem(
+                    context,
+                    'Add New',
+                    Icons.add_circle,
+                    AppColors.primaryContainer,
+                    AppColors.onPrimaryContainer,
+                    AppColors.onPrimaryContainer,
+                    () => context.push('/recipes/create'),
+                  );
+                }
+                if (index == 2) {
+                  return _buildBentoItem(
+                    context,
+                    'Manage Pantry',
+                    Icons.inventory_2,
+                    AppColors.surfaceContainerLowest,
+                    AppColors.secondary,
+                    AppColors.onSecondary,
+                    () => context.push('/pantry'),
+                  );
+                }
+                if (index == 3) {
+                  return _buildBentoItem(
+                    context,
+                    'Meal Planner',
+                    Icons.calendar_month,
+                    AppColors.surfaceContainerLowest,
+                    AppColors.tertiary,
+                    AppColors.onTertiary,
+                    () => context.push('/meal-plan'),
+                  );
+                }
+                return _buildBentoItem(
+                  context,
+                  'Browse Ingredients',
+                  Icons.kitchen,
+                  AppColors.surfaceContainerLowest,
+                  AppColors.primaryDim,
+                  AppColors.onPrimary,
+                  () => context.push('/ingredients'),
+                );
               },
             ),
             const SizedBox(height: 48),
           ],
-          
+
           // Suggestions/Search header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -314,11 +414,18 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isSearching ? 'Search Results' : 'Make it Now', style: AppTextStyles.h3),
+                    Text(
+                      isSearching ? 'Search Results' : 'Make it Now',
+                      style: AppTextStyles.h3,
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                      isSearching ? 'Recipes matching "$_searchQuery"' : 'Based on items in your pantry', 
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onSurfaceVariant)
+                      isSearching
+                          ? 'Recipes matching "$_searchQuery"'
+                          : 'Based on items in your pantry',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -328,14 +435,16 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                   onTap: () => context.push('/recipes'),
                   child: Text(
                     'View All',
-                    style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary),
+                    style: AppTextStyles.labelLarge.copyWith(
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Recipes List
           if (isSearching)
             _buildSearchResults(ref)
@@ -348,7 +457,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
 
   Widget _buildSearchResults(WidgetRef ref) {
     final searchAsync = ref.watch(searchRecipesProvider(_searchQuery));
-    
+
     return searchAsync.when(
       data: (recipes) {
         if (recipes.isEmpty) {
@@ -357,33 +466,41 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
               padding: const EdgeInsets.all(32.0),
               child: Text(
                 'No recipes found matching "$_searchQuery"',
-                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.onSurfaceVariant),
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
           );
         }
-        
+
         return Column(
-          children: recipes.map((recipe) => Padding(
-            padding: const EdgeInsets.only(bottom: 24.0),
-            child: _RecipeCard(
-              title: recipe.name,
-              description: recipe.instructions.length > 100 
-                  ? '${recipe.instructions.substring(0, 100)}...' 
-                  : recipe.instructions,
-              imageUrl: recipe.imageUrl,
-              tag: recipe.tags.isNotEmpty ? recipe.tags.first : 'Recipe',
-              tagColor: AppColors.primaryContainer,
-              tagTextColor: AppColors.onPrimaryContainer,
-              time: '${(recipe.prepTime ?? 0) + (recipe.cookTime ?? 0)}m',
-              onCookNow: () => context.push('/recipes/${recipe.id}'),
-              isFavorite: recipe.isFavorite,
-              onBookmark: () {
-                ref.read(recipeServiceProvider).toggleFavorite(recipe.id, !recipe.isFavorite);
-              },
-            ),
-          )).toList(),
+          children: recipes
+              .map(
+                (recipe) => Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0),
+                  child: _RecipeCard(
+                    title: recipe.name,
+                    description: recipe.instructions.length > 100
+                        ? '${recipe.instructions.substring(0, 100)}...'
+                        : recipe.instructions,
+                    imageUrl: recipe.imageUrl,
+                    tag: recipe.tags.isNotEmpty ? recipe.tags.first : 'Recipe',
+                    tagColor: AppColors.primaryContainer,
+                    tagTextColor: AppColors.onPrimaryContainer,
+                    time: '${(recipe.prepTime ?? 0) + (recipe.cookTime ?? 0)}m',
+                    onCookNow: () => context.push('/recipes/${recipe.id}'),
+                    isFavorite: recipe.isFavorite,
+                    onBookmark: () {
+                      ref
+                          .read(recipeServiceProvider)
+                          .toggleFavorite(recipe.id, !recipe.isFavorite);
+                    },
+                  ),
+                ),
+              )
+              .toList(),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -393,7 +510,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
 
   Widget _buildMakeItNowResults(WidgetRef ref) {
     final makeItNowAsync = ref.watch(recipesWithCurrentIngredientsProvider);
-    
+
     return makeItNowAsync.when(
       data: (recipes) {
         if (recipes.isEmpty) {
@@ -406,7 +523,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                   const SizedBox(height: 16),
                   Text(
                     'Add more ingredients to your pantry to see recommendations here.',
-                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.onSurfaceVariant),
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -419,28 +538,36 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
             ),
           );
         }
-        
+
         // Show up to 3 recommendations
         final displayRecipes = recipes.take(3).toList();
-        
+
         return Column(
-          children: displayRecipes.map((recipe) => Padding(
-            padding: const EdgeInsets.only(bottom: 24.0),
-            child: _RecipeCard(
-              title: recipe.name,
-              description: recipe.instructions.length > 80 ? '${recipe.instructions.substring(0, 80)}...' : recipe.instructions,
-              imageUrl: recipe.imageUrl,
-              tag: 'Ready to Cook',
-              tagColor: AppColors.secondary,
-              tagTextColor: AppColors.onSecondary,
-              time: '${(recipe.prepTime ?? 0) + (recipe.cookTime ?? 0)}m',
-              onCookNow: () => context.push('/recipes/${recipe.id}'),
-              isFavorite: recipe.isFavorite,
-              onBookmark: () {
-                ref.read(recipeServiceProvider).toggleFavorite(recipe.id, !recipe.isFavorite);
-              },
-            ),
-          )).toList(),
+          children: displayRecipes
+              .map(
+                (recipe) => Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0),
+                  child: _RecipeCard(
+                    title: recipe.name,
+                    description: recipe.instructions.length > 80
+                        ? '${recipe.instructions.substring(0, 80)}...'
+                        : recipe.instructions,
+                    imageUrl: recipe.imageUrl,
+                    tag: 'Ready to Cook',
+                    tagColor: AppColors.secondary,
+                    tagTextColor: AppColors.onSecondary,
+                    time: '${(recipe.prepTime ?? 0) + (recipe.cookTime ?? 0)}m',
+                    onCookNow: () => context.push('/recipes/${recipe.id}'),
+                    isFavorite: recipe.isFavorite,
+                    onBookmark: () {
+                      ref
+                          .read(recipeServiceProvider)
+                          .toggleFavorite(recipe.id, !recipe.isFavorite);
+                    },
+                  ),
+                ),
+              )
+              .toList(),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -448,7 +575,15 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     );
   }
 
-  Widget _buildBentoItem(BuildContext context, String title, IconData icon, Color bgColor, Color iconColor, Color iconOnColor, VoidCallback onTap) {
+  Widget _buildBentoItem(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color bgColor,
+    Color iconColor,
+    Color iconOnColor,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -480,7 +615,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
               title,
               style: AppTextStyles.h4.copyWith(
                 fontSize: 16,
-                color: bgColor == AppColors.primaryContainer ? AppColors.onPrimaryContainer : AppColors.onBackground,
+                color: bgColor == AppColors.primaryContainer
+                    ? AppColors.onPrimaryContainer
+                    : AppColors.onBackground,
               ),
             ),
           ],
@@ -539,15 +676,15 @@ class _RecipeCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                RecipeImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                ),
+                RecipeImage(imageUrl: imageUrl, fit: BoxFit.cover),
                 Positioned(
                   top: 16,
                   left: 16,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: tagColor,
                       borderRadius: BorderRadius.circular(16),
@@ -570,11 +707,18 @@ class _RecipeCard extends StatelessWidget {
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         color: Colors.white.withAlpha(200),
                         child: Row(
                           children: [
-                            const Icon(Icons.timer, size: 16, color: AppColors.primary),
+                            const Icon(
+                              Icons.timer,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               time,
@@ -601,7 +745,9 @@ class _RecipeCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   description,
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onSurfaceVariant),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -620,7 +766,9 @@ class _RecipeCard extends StatelessWidget {
                         ),
                         child: Text(
                           'Cook Now',
-                          style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                          style: AppTextStyles.labelLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -634,8 +782,8 @@ class _RecipeCard extends StatelessWidget {
                       ),
                       child: IconButton(
                         icon: Icon(
-                          isFavorite ? Icons.bookmark : Icons.bookmark_border, 
-                          color: AppColors.primary
+                          isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                          color: AppColors.primary,
                         ),
                         onPressed: onBookmark,
                       ),

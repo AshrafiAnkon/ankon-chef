@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../providers/auth_provider.dart';
+import '../widgets/email_login_modal.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen();
@@ -232,7 +232,12 @@ class LoginScreen extends ConsumerWidget {
 
           TextButton(
             onPressed: () {
-              context.push('/email-login');
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const EmailLoginModal(),
+              );
             },
             style: TextButton.styleFrom(
               backgroundColor: AppColors.primaryContainer.withAlpha(25),
