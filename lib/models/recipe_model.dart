@@ -1,6 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
+/// Recipe ingredient quantity model
+class RecipeQuantity extends Equatable {
+  final double amount;
+  final String unit;
+
+  const RecipeQuantity({
+    required this.amount,
+    required this.unit,
+  });
+
+  factory RecipeQuantity.fromMap(Map<String, dynamic> data) {
+    return RecipeQuantity(
+      amount: (data['amount'] as num).toDouble(),
+      unit: data['unit'] as String,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'amount': amount,
+      'unit': unit,
+    };
+  }
+
+  @override
+  List<Object?> get props => [amount, unit];
+}
+
 /// Recipe model
 class Recipe extends Equatable {
   final String id;
@@ -13,7 +41,7 @@ class Recipe extends Equatable {
   final int? prepTime; // in minutes
   final int? cookTime; // in minutes
   final int? calories;
-  final Map<String, String>? ingredientQuantities; // ingredientId -> quantity string (e.g. "4 cups")
+  final Map<String, RecipeQuantity>? ingredientQuantities; // ingredientId -> quantity amount and unit
   final String? youtubeUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -51,7 +79,12 @@ class Recipe extends Equatable {
       cookTime: data['cookTime'] as int?,
       calories: data['calories'] as int?,
       ingredientQuantities: data['ingredientQuantities'] != null 
-          ? Map<String, String>.from(data['ingredientQuantities'] as Map)
+          ? (data['ingredientQuantities'] as Map<String, dynamic>).map(
+              (key, value) => MapEntry(
+                key,
+                RecipeQuantity.fromMap(value as Map<String, dynamic>),
+              ),
+            )
           : null,
       youtubeUrl: data['youtubeUrl'] as String?,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
@@ -71,7 +104,9 @@ class Recipe extends Equatable {
       'prepTime': prepTime,
       'cookTime': cookTime,
       'calories': calories,
-      'ingredientQuantities': ingredientQuantities,
+      'ingredientQuantities': ingredientQuantities?.map(
+        (key, value) => MapEntry(key, value.toMap()),
+      ),
       'youtubeUrl': youtubeUrl,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -90,7 +125,7 @@ class Recipe extends Equatable {
     int? prepTime,
     int? cookTime,
     int? calories,
-    Map<String, String>? ingredientQuantities,
+    Map<String, RecipeQuantity>? ingredientQuantities,
     String? youtubeUrl,
     DateTime? createdAt,
     DateTime? updatedAt,

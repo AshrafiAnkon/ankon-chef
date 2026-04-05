@@ -129,8 +129,11 @@ class RecipeDetailScreen extends ConsumerWidget {
                           return Column(
                             children: recipe.ingredientIds.map((id) {
                               final ingredient = ingredientMap[id];
-                              final quantity = recipe.ingredientQuantities?[id] ?? '';
-                              return _buildIngredientItem(ingredient?.name ?? 'Unknown', quantity);
+                              final qty = recipe.ingredientQuantities?[id];
+                              final quantityStr = qty != null 
+                                  ? '${qty.amount > 0 ? (qty.amount % 1 == 0 ? qty.amount.toInt().toString() : qty.amount.toString()) : ""} ${qty.unit}'.trim() 
+                                  : '';
+                              return _buildIngredientItem(ingredient?.name ?? 'Unknown', quantityStr);
                             }).toList(),
                           );
                         },

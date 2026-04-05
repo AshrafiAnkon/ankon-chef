@@ -12,6 +12,7 @@ import '../../providers/recipe_provider.dart';
 import '../../providers/ingredient_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/ingredient_model.dart';
+import '../../models/recipe_model.dart';
 import '../widgets/ingredient_multi_select.dart';
 import '../widgets/recipe_image.dart';
 
@@ -34,7 +35,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   final _imageSearchController = TextEditingController();
   final _youtubeController = TextEditingController();
 
-  final Map<String, TextEditingController> _quantityControllers = {};
+  final Map<String, TextEditingController> _quantityAmountControllers = {};
+  final Map<String, String> _quantityUnits = {};
   final List<String> _selectedIngredientIds = [];
   final List<String> _tags = [];
 
@@ -84,7 +86,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
           if (recipe.ingredientQuantities != null) {
             recipe.ingredientQuantities!.forEach((id, qty) {
-              _quantityControllers[id] = TextEditingController(text: qty);
+              _quantityAmountControllers[id] = TextEditingController(text: qty.amount.toString());
+              _quantityUnits[id] = qty.unit;
             });
           }
         });
@@ -116,7 +119,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     _youtubeController.dispose();
     _isSearchingNotifier.dispose();
     _searchResultsNotifier.dispose();
-    for (var controller in _quantityControllers.values) {
+    for (var controller in _quantityAmountControllers.values) {
       controller.dispose();
     }
     super.dispose();
@@ -166,9 +169,12 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
       final recipeService = ref.read(recipeServiceProvider);
 
-      final Map<String, String> ingredientQuantities = {};
+      final Map<String, RecipeQuantity> ingredientQuantities = {};
       for (var id in _selectedIngredientIds) {
-        ingredientQuantities[id] = _quantityControllers[id]?.text ?? '';
+        ingredientQuantities[id] = RecipeQuantity(
+          amount: double.tryParse(_quantityAmountControllers[id]?.text ?? '') ?? 0.0,
+          unit: _quantityUnits[id] ?? 'pieces',
+        );
       }
 
       if (_isEditing) {
@@ -254,6 +260,26 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     return sanitized;
   }
 
+  // Helper to parse string to RecipeQuantity
+  RecipeQuantity _parseMeasure(String measure) {
+    if (measure.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pieces');
+    final parts = measure.trim().split(' ');
+    if (parts.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pieces');
+    
+    final parsedAmount = double.tryParse(parts.first);
+    if (parsedAmount != null) {
+      if (parts.length > 1) {
+        return RecipeQuantity(
+          amount: parsedAmount,
+          unit: parts.sublist(1).join(' ').trim(),
+        );
+      }
+      return RecipeQuantity(amount: parsedAmount, unit: 'pieces');
+    }
+    
+    return RecipeQuantity(amount: 0, unit: measure);
+  }
+
   Future<void> _importRecipe(Map<String, dynamic> meal, {bool imageOnly = false}) async {
     if (imageOnly) {
       setState(() {
@@ -299,7 +325,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
       // Ingredients
       _selectedIngredientIds.clear();
-      _quantityControllers.clear();
+      _quantityAmountControllers.clear();
+      _quantityUnits.clear();
 
       final ingredientService = ref.read(ingredientServiceProvider);
       
@@ -368,15 +395,26 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
              
              if (mounted) {
                 setState(() {
+                  final parsedQty = _parseMeasure(finalMeasure);
+                  
                   if (!_selectedIngredientIds.contains(id)) {
                     _selectedIngredientIds.add(id);
-                    _quantityControllers[id] = TextEditingController(text: finalMeasure);
+                    _quantityAmountControllers[id] = TextEditingController(text: parsedQty.amount > 0 ? parsedQty.amount.toString() : '');
+                    _quantityUnits[id] = parsedQty.unit;
                   } else {
-                    final currentText = _quantityControllers[id]?.text ?? '';
-                    if (currentText.isEmpty) {
-                      _quantityControllers[id]?.text = finalMeasure;
-                    } else if (finalMeasure.isNotEmpty && !currentText.contains(finalMeasure)) {
-                      _quantityControllers[id]?.text = '$currentText + $finalMeasure';
+                    final currentAmountText = _quantityAmountControllers[id]?.text ?? '';
+                    if (currentAmountText.isEmpty && parsedQty.amount > 0) {
+                      _quantityAmountControllers[id]?.text = parsedQty.amount.toString();
+                    } else if (parsedQty.amount > 0) {
+                      final currentAmount = double.tryParse(currentAmountText) ?? 0;
+                      _quantityAmountControllers[id]?.text = (currentAmount + parsedQty.amount).toString();
+                    }
+                    
+                    final currentUnit = _quantityUnits[id] ?? '';
+                    if (currentUnit.isEmpty || currentUnit == 'pieces') {
+                      _quantityUnits[id] = parsedQty.unit;
+                    } else if (parsedQty.unit.isNotEmpty && parsedQty.unit != 'pieces' && !currentUnit.contains(parsedQty.unit)) {
+                      _quantityUnits[id] = '$currentUnit + ${parsedQty.unit}';
                     }
                   }
                 });
@@ -1188,8 +1226,11 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   }
 
   Widget _buildIngredientQuantityRow(Ingredient ingredient) {
-    if (!_quantityControllers.containsKey(ingredient.id)) {
-      _quantityControllers[ingredient.id] = TextEditingController();
+    if (!_quantityAmountControllers.containsKey(ingredient.id)) {
+      _quantityAmountControllers[ingredient.id] = TextEditingController();
+    }
+    if (!_quantityUnits.containsKey(ingredient.id)) {
+      _quantityUnits[ingredient.id] = 'pieces'; // default unit
     }
 
     return Container(
@@ -1211,9 +1252,26 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           Expanded(
             flex: 2,
             child: TextFormField(
-              controller: _quantityControllers[ingredient.id],
+              controller: _quantityAmountControllers[ingredient.id],
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
-                hintText: 'e.g., 4 cups',
+                hintText: 'e.g., 4',
+                border: InputBorder.none,
+                isDense: true,
+              ),
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: TextFormField(
+              initialValue: _quantityUnits[ingredient.id],
+              onChanged: (val) => _quantityUnits[ingredient.id] = val,
+              decoration: const InputDecoration(
+                hintText: 'e.g., cups',
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -1240,7 +1298,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             onPressed: () {
               setState(() {
                 _selectedIngredientIds.remove(ingredient.id);
-                _quantityControllers.remove(ingredient.id)?.dispose();
+                _quantityAmountControllers.remove(ingredient.id)?.dispose();
+                _quantityUnits.remove(ingredient.id);
               });
             },
           ),

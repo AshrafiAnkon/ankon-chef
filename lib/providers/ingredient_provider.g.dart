@@ -279,4 +279,4 @@ final class CurrentIngredientIdsProvider
 }
 
 String _$currentIngredientIdsHash() =>
-    r'2253f839ecb93ed223d58734b2e4e7df07b8e48f';
+    r'56d94c28c5206bdd9fd15cf1c21204185a562b74';

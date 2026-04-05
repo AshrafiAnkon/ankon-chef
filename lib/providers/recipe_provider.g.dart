@@ -226,7 +226,7 @@ final class RecipesWithCurrentIngredientsProvider
 }
 
 String _$recipesWithCurrentIngredientsHash() =>
-    r'8a365a7c50b4830b93c3bdc5b4f99ecbf4ab5ab9';
+    r'153290ef1262255f7c4725faccb438885771a488';
 
 /// Recipes with 1-2 missing ingredients
 
@@ -272,7 +272,7 @@ final class RecipesWithFewMissingIngredientsProvider
 }
 
 String _$recipesWithFewMissingIngredientsHash() =>
-    r'bfd15f95b758e8bd50c5ccb30989199e1fb34621';
+    r'fbc832d4043158a220fa63b518d9171c69dc4ea6';
 
 /// Get recipe by ID
 
