@@ -1,18 +1,74 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:go_router/go_router.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
-import '../../providers/meal_plan_provider.dart';
-import '../../providers/recipe_provider.dart';
-import '../../providers/ingredient_provider.dart';
-import '../widgets/recipe_image.dart';
-import '../../providers/auth_provider.dart';
+
 import '../../models/meal_plan_model.dart';
 import '../../models/recipe_model.dart';
-import '../widgets/settings_bottom_sheet.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/ingredient_provider.dart';
+import '../../providers/meal_plan_provider.dart';
+import '../../providers/recipe_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
+import '../widgets/recipe_image.dart';
+
+const _kAppBarAvatarUrl =
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuCKPrAKao3Dx84rEyi1AfJEV0SKzYQRBzHk8jCPUcIkT6EFIzxh4AFpehx6-IyEaby4qRInGub6FueKfeHdaKHU5rXHAvqwHDqa6l-aUEf4XPWsKSZ3O-YtYWP4utZDQs6Fl1AMzoNvRLMZgycWjWhNdFC8mDAgH06QOXD1A7xwT8BjeQkqX0BDsOQraqMZJVeVqKIjnLaefsKfFBdSrlH9T2EOCznFo-cI0XPD4HFFudHoifVPDWtChBpeI-V8RngHaWuI0f2wp7ui';
+
+const _kSharedAvatarUrls = <String>[
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuCKPrAKao3Dx84rEyi1AfJEV0SKzYQRBzHk8jCPUcIkT6EFIzxh4AFpehx6-IyEaby4qRInGub6FueKfeHdaKHU5rXHAvqwHDqa6l-aUEf4XPWsKSZ3O-YtYWP4utZDQs6Fl1AMzoNvRLMZgycWjWhNdFC8mDAgH06QOXD1A7xwT8BjeQkqX0BDsOQraqMZJVeVqKIjnLaefsKfFBdSrlH9T2EOCznFo-cI0XPD4HFFudHoifVPDWtChBpeI-V8RngHaWuI0f2wp7ui',
+  'https://api.dicebear.com/7.x/avataaars/png?seed=chef2',
+];
+
+const _kMealPeriods = <String>[
+  'Breakfast',
+  'Lunch',
+  'Afternoon Snacks',
+  'Dinner',
+];
+
+String _normalizeMealPeriod(String raw) {
+  final p = raw.trim().toLowerCase();
+  if (p.contains('breakfast')) return 'Breakfast';
+  if (p.contains('lunch')) return 'Lunch';
+  if (p.contains('afternoon') || p == 'snack' || p.contains('snacks')) {
+    return 'Afternoon Snacks';
+  }
+  if (p.contains('dinner')) return 'Dinner';
+  return 'Dinner';
+}
+
+TimeOfDay _defaultTimeForPeriod(String period) {
+  switch (period) {
+    case 'Breakfast':
+      return const TimeOfDay(hour: 8, minute: 0);
+    case 'Lunch':
+      return const TimeOfDay(hour: 12, minute: 30);
+    case 'Afternoon Snacks':
+      return const TimeOfDay(hour: 15, minute: 0);
+    case 'Dinner':
+    default:
+      return const TimeOfDay(hour: 19, minute: 0);
+  }
+}
+
+String _formatTimeOfDay(TimeOfDay t) {
+  final h = t.hour.toString().padLeft(2, '0');
+  final m = t.minute.toString().padLeft(2, '0');
+  return '$h:$m';
+}
+
+int _countMissingIngredients(Recipe recipe, Set<String> pantryIds) {
+  return recipe.ingredientIds.where((id) => !pantryIds.contains(id)).length;
+}
+
+bool _isFullyStocked(Recipe recipe, Set<String> pantryIds) {
+  if (recipe.ingredientIds.isEmpty) return true;
+  return recipe.ingredientIds.every((id) => pantryIds.contains(id));
+}
 
 class MealPlanScreen extends ConsumerStatefulWidget {
   const MealPlanScreen({super.key});
@@ -23,7 +79,6 @@ class MealPlanScreen extends ConsumerStatefulWidget {
 
 class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   late DateTime _selectedDate;
-  late DateTime _weekStart;
   late ScrollController _scrollController;
 
   @override
@@ -31,12 +86,8 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     super.initState();
     final now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
-    _weekStart = _selectedDate.subtract(
-      Duration(days: _selectedDate.weekday - 1),
-    );
     _scrollController = ScrollController();
   }
-
 
   @override
   void dispose() {
@@ -46,11 +97,11 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
 
   void _selectDate(DateTime date) {
     setState(() {
-      _selectedDate = date;
+      _selectedDate = DateTime(date.year, date.month, date.day);
     });
   }
 
-  void _showFullMonthPicker() async {
+  Future<void> _showFullMonthPicker() async {
     final date = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -72,10 +123,26 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     );
     if (date != null) {
       setState(() {
-        _selectedDate = date;
-        _weekStart = date.subtract(Duration(days: date.weekday - 1));
+        _selectedDate = DateTime(date.year, date.month, date.day);
       });
     }
+  }
+
+  void _showSelectRecipesDialog({String? initialMealPeriod}) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: _SelectRecipesBottomSheet(
+          selectedDate: _selectedDate,
+          initialMealPeriod: initialMealPeriod,
+        ),
+      ),
+    );
   }
 
   @override
@@ -86,12 +153,10 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       backgroundColor: AppColors.surface,
       appBar: _buildAppBar(),
       body: _buildBody(),
-      floatingActionButton: _buildFAB(),
       bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
-  // ─── APP BAR ───────────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
       preferredSize: const Size.fromHeight(80),
@@ -108,16 +173,22 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    'assets/images/app_logo.png',
+                  child: Image.network(
+                    _kAppBarAvatarUrl,
                     width: 40,
                     height: 40,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 40,
+                      height: 40,
+                      color: AppColors.surfaceContainerHigh,
+                      child: const Icon(Icons.person, color: AppColors.outline),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  'Ankon-Chef',
+                  'Sous-Chef',
                   style: AppTextStyles.h3.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w900,
@@ -127,19 +198,12 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(
-                  Icons.search,
-                  color: AppColors.onSurfaceVariant,
-                ),
-                onPressed: () => _showSelectRecipesDialog(),
-              ),
-              IconButton(
                 padding: const EdgeInsets.only(right: 24),
                 icon: const Icon(
-                  Icons.settings,
+                  Icons.calendar_month,
                   color: AppColors.onSurfaceVariant,
                 ),
-                onPressed: () => showSettingsBottomSheet(context, ref),
+                onPressed: _showFullMonthPicker,
               ),
             ],
           ),
@@ -148,7 +212,6 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     );
   }
 
-  // ─── BODY ──────────────────────────────────────────────────────────
   Widget _buildBody() {
     return SingleChildScrollView(
       controller: _scrollController,
@@ -161,24 +224,19 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMealPlannerHeader(),
+          _buildPlannerHeader(),
           const SizedBox(height: 24),
-          _buildWeeklyCalendar(),
+          _buildFiveDayStrip(),
           const SizedBox(height: 28),
-          _buildPlannedMealsSection(),
+          _buildMealSections(),
           const SizedBox(height: 28),
-          _buildTodaysIngredientsSection(),
-          const SizedBox(height: 20),
-          _buildEstimatedPrepTime(),
+          _buildInventoryBento(),
         ],
       ),
     );
   }
 
-  // ─── MEAL PLANNER HEADER ──────────────────────────────────────────
-  Widget _buildMealPlannerHeader() {
-    final monthYear = DateFormat('MMMM yyyy').format(_selectedDate);
-
+  Widget _buildPlannerHeader() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -187,7 +245,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Meal Planner',
+                'Planner',
                 style: AppTextStyles.h2.copyWith(
                   color: AppColors.onBackground,
                   fontWeight: FontWeight.w800,
@@ -195,7 +253,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                monthYear,
+                DateFormat('EEEE, MMM d').format(_selectedDate),
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.onSurfaceVariant,
                 ),
@@ -203,40 +261,41 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
             ],
           ),
         ),
-        GestureDetector(
-          onTap: _showFullMonthPicker,
-          child: Row(
-            children: [
-              const Icon(
-                Icons.calendar_month,
-                color: AppColors.primary,
-                size: 18,
+        Material(
+          color: AppColors.primary,
+          elevation: 4,
+          shadowColor: AppColors.primary.withAlpha(100),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => _showSelectRecipesDialog(),
+            child: const SizedBox(
+              width: 56,
+              height: 56,
+              child: Icon(
+                Icons.shopping_cart_outlined,
+                color: AppColors.onPrimary,
+                size: 26,
               ),
-              const SizedBox(width: 6),
-              Text(
-                'View Full Month',
-                style: AppTextStyles.labelLarge.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  // ─── WEEKLY CALENDAR ──────────────────────────────────────────────
-  Widget _buildWeeklyCalendar() {
-    final days = List.generate(7, (i) => _weekStart.add(Duration(days: i)));
+  Widget _buildFiveDayStrip() {
+    final days = List.generate(
+      5,
+      (i) => _selectedDate.add(Duration(days: i - 2)),
+    );
 
     return SizedBox(
       height: 72,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: days.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final day = days[index];
           final isSelected = day.year == _selectedDate.year &&
@@ -251,7 +310,9 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               curve: Curves.easeInOut,
               width: 60,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.surfaceContainerLowest,
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(16),
                 border: isSelected
                     ? null
@@ -299,424 +360,308 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     );
   }
 
-  // ─── PLANNED MEALS SECTION ────────────────────────────────────────
-  Widget _buildPlannedMealsSection() {
-    final normalizedDate = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+  Widget _buildMealSections() {
+    final normalizedDate =
+        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
     final mealPlanAsync = ref.watch(mealPlanForDateProvider(normalizedDate));
-
-    return mealPlanAsync.when(
-      data: (mealPlan) {
-
-        if (mealPlan == null || mealPlan.recipeIds.isEmpty) {
-          return _buildPlannedMealsEmpty();
-        }
-        return _buildPlannedMealsList(mealPlan);
-      },
-      loading: () => _buildPlannedMealsSkeleton(),
-      error: (e, s) => _buildPlannedMealsEmpty(),
-    );
-  }
-
-  Widget _buildPlannedMealsEmpty() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Planned Meals',
-              style: AppTextStyles.h3.copyWith(
-                color: AppColors.onBackground,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '0 Recipes',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColors.outlineVariant.withAlpha(80),
-              style: BorderStyle.solid,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.event_note,
-                size: 48,
-                color: AppColors.onSurfaceVariant.withAlpha(100),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No meals planned for this day',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tap + to start planning',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.outline,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildAddMealButton(),
-      ],
-    );
-  }
-
-  Widget _buildPlannedMealsSkeleton() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text('Planned Meals', style: AppTextStyles.h3),
-            const Spacer(),
-          ],
-        ),
-        const SizedBox(height: 16),
-        const Center(
-          child: Padding(
-            padding: EdgeInsets.all(32),
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPlannedMealsList(MealPlan mealPlan) {
     final recipesAsync = ref.watch(userRecipesProvider);
-    final mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
-
-    return recipesAsync.when(
-      data: (allRecipes) {
-        final plannedRecipes =
-            allRecipes.where((r) => mealPlan.recipeIds.contains(r.id)).toList();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Planned Meals',
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.onBackground,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${plannedRecipes.length} Recipe${plannedRecipes.length != 1 ? "s" : ""}',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.onPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...plannedRecipes.asMap().entries.map((entry) {
-              final index = entry.key;
-              final recipe = entry.value;
-              final mealType =
-                  index < mealTypes.length ? mealTypes[index] : 'Meal';
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _MealCard(
-                  recipe: recipe,
-                  mealType: mealType,
-                  onRemove: () => _removeRecipeFromPlan(mealPlan, recipe.id),
-                ),
-              );
-            }),
-            _buildAddMealButton(),
-          ],
-        );
-      },
-      loading: () => _buildPlannedMealsSkeleton(),
-      error: (e, s) => Text('Error: $e'),
-    );
-  }
-
-  Widget _buildAddMealButton() {
-    return GestureDetector(
-      onTap: () => _showSelectRecipesDialog(),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.outlineVariant.withAlpha(120),
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.add_circle_outline,
-              size: 28,
-              color: AppColors.onSurfaceVariant,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Plan another meal for today',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─── TODAY'S INGREDIENTS SECTION ──────────────────────────────────
-  Widget _buildTodaysIngredientsSection() {
-    final mealPlanAsync = ref.watch(mealPlanForDateProvider(_selectedDate));
+    final pantryAsync = ref.watch(currentIngredientIdsProvider);
 
     return mealPlanAsync.when(
       data: (mealPlan) {
-        if (mealPlan == null || mealPlan.recipeIds.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        return _buildIngredientsContent(mealPlan);
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
-    );
-  }
+        return recipesAsync.when(
+          data: (allRecipes) {
+            return pantryAsync.when(
+              data: (pantryIds) {
+                final recipeMap = {
+                  for (final r in allRecipes) r.id: r,
+                };
+                final pantrySet = pantryIds.toSet();
 
-  Widget _buildIngredientsContent(MealPlan mealPlan) {
-    final currentIngredientsAsync = ref.watch(currentIngredientIdsProvider);
+                final grouped = <String, List<PlannedMeal>>{};
+                for (final p in _kMealPeriods) {
+                  grouped[p] = [];
+                }
+                if (mealPlan != null) {
+                  for (final m in mealPlan.plannedMeals) {
+                    final key = _normalizeMealPeriod(m.mealPeriod);
+                    grouped.putIfAbsent(key, () => []).add(m);
+                  }
+                }
 
-    return currentIngredientsAsync.when(
-      data: (currentIngredientIds) {
-        return FutureBuilder<List<GroceryItem>>(
-          future: _generateGroceryList(mealPlan, currentIngredientIds),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final period in _kMealPeriods) ...[
+                      _MealPeriodBlock(
+                        title: period,
+                        meals: grouped[period] ?? const [],
+                        recipeMap: recipeMap,
+                        pantryIds: pantrySet,
+                        onAddRecipe: () =>
+                            _showSelectRecipesDialog(initialMealPeriod: period),
+                        onQuickLog: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Quick log (demo)')),
+                          );
+                        },
+                        onRemoveMeal: mealPlan == null
+                            ? null
+                            : (planned) =>
+                                _removeMealFromPlan(mealPlan, planned),
+                        onStartCooking: (recipe) =>
+                            context.push('/recipes/${recipe.id}'),
+                        onAddIngredients: (recipe) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Add ingredients for ${recipe.name}',
+                              ),
+                            ),
+                          );
+                          context.push('/pantry');
+                        },
+                        onCheck: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Marked as checked')),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ],
+                );
+              },
+              loading: () => const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
-              );
-            }
-
-            final groceryItems = snapshot.data ?? [];
-            if (groceryItems.isEmpty) return const SizedBox.shrink();
-
-            // Group ingredients by a simulated category
-            final freshProduce = <GroceryItem>[];
-            final proteins = <GroceryItem>[];
-            final pantryStaples = <GroceryItem>[];
-
-            for (final item in groceryItems) {
-              final name = item.ingredientName.toLowerCase();
-              if (_isProtein(name)) {
-                proteins.add(item);
-              } else if (_isFreshProduce(name)) {
-                freshProduce.add(item);
-              } else {
-                pantryStaples.add(item);
-              }
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      "Today's Ingredients",
-                      style: AppTextStyles.h3.copyWith(
-                        color: AppColors.onBackground,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(20),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.shopping_bag_outlined,
-                        color: AppColors.primary,
-                        size: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                if (freshProduce.isNotEmpty)
-                  _IngredientCategoryRow(
-                    icon: Icons.eco,
-                    iconColor: const Color(0xFF2E7D32),
-                    iconBgColor: const Color(0xFFE8F5E9),
-                    title: 'Fresh Produce',
-                    items: freshProduce
-                        .map((i) => i.ingredientName)
-                        .join(', '),
-                  ),
-                if (proteins.isNotEmpty)
-                  _IngredientCategoryRow(
-                    icon: Icons.egg_alt,
-                    iconColor: AppColors.primary,
-                    iconBgColor: AppColors.primary.withAlpha(20),
-                    title: 'Proteins',
-                    items: proteins
-                        .map((i) => i.ingredientName)
-                        .join(', '),
-                  ),
-                if (pantryStaples.isNotEmpty)
-                  _IngredientCategoryRow(
-                    icon: Icons.kitchen,
-                    iconColor: const Color(0xFF795548),
-                    iconBgColor: const Color(0xFFEFEBE9),
-                    title: 'Pantry Staples',
-                    items: pantryStaples
-                        .map((i) => i.ingredientName)
-                        .join(', '),
-                  ),
-              ],
+              ),
+              error: (e, s) => const SizedBox.shrink(),
             );
           },
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          ),
+          error: (e, _) => Text('Error: $e'),
         );
       },
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      ),
+      error: (e, s) => const SizedBox.shrink(),
     );
   }
 
-  bool _isProtein(String name) {
-    final proteinKeywords = [
-      'chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'shrimp',
-      'turkey', 'lamb', 'tofu', 'egg', 'meat', 'steak', 'fillet',
-      'breast', 'thigh', 'wing', 'prawn', 'crab', 'lobster',
-    ];
-    return proteinKeywords.any((k) => name.contains(k));
+  Future<void> _removeMealFromPlan(
+    MealPlan mealPlan,
+    PlannedMeal meal,
+  ) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    final updated =
+        mealPlan.plannedMeals.where((m) => m != meal).toList();
+    final service = ref.read(mealPlanServiceProvider);
+
+    if (updated.isEmpty) {
+      await service.deleteMealPlan(mealPlan.id);
+    } else {
+      await service.createOrUpdateMealPlan(
+        userId: user.uid,
+        planDate: mealPlan.planDate,
+        plannedMeals: updated,
+        existingMealPlanId: mealPlan.id,
+      );
+    }
   }
 
-  bool _isFreshProduce(String name) {
-    final produceKeywords = [
-      'tomato', 'lettuce', 'spinach', 'kale', 'avocado', 'onion',
-      'garlic', 'pepper', 'carrot', 'broccoli', 'cauliflower', 'cucumber',
-      'lemon', 'lime', 'orange', 'apple', 'banana', 'berry', 'grape',
-      'mango', 'pineapple', 'potato', 'sweet potato', 'mushroom',
-      'celery', 'asparagus', 'zucchini', 'corn', 'peas', 'bean',
-      'cilantro', 'parsley', 'basil', 'mint', 'ginger', 'cabbage',
-    ];
-    return produceKeywords.any((k) => name.contains(k));
-  }
-
-  // ─── ESTIMATED PREP TIME ──────────────────────────────────────────
-  Widget _buildEstimatedPrepTime() {
-    final mealPlanAsync = ref.watch(mealPlanForDateProvider(_selectedDate));
+  Widget _buildInventoryBento() {
+    final normalizedDate =
+        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final mealPlanAsync = ref.watch(mealPlanForDateProvider(normalizedDate));
+    final pantryAsync = ref.watch(currentIngredientIdsProvider);
 
     return mealPlanAsync.when(
       data: (mealPlan) {
-        if (mealPlan == null || mealPlan.recipeIds.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        final estimatedMinutes = mealPlan.recipeIds.length * 20;
-        return Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Row(
-            children: [
-              Text(
-                'Estimated Prep Time',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '$estimatedMinutes Minutes Total',
-                style: AppTextStyles.labelLarge.copyWith(
-                  color: AppColors.onBackground,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+        return pantryAsync.when(
+          data: (pantryIds) {
+            if (mealPlan == null || mealPlan.plannedMeals.isEmpty) {
+              return _inventoryCardStatic();
+            }
+            return FutureBuilder<List<GroceryItem>>(
+              future: ref.read(mealPlanServiceProvider).generateGroceryList(
+                    recipeIds: mealPlan.recipeIds,
+                    currentIngredientIds: pantryIds,
+                  ),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary),
+                    ),
+                  );
+                }
+                final items = snapshot.data!;
+                if (items.isEmpty) {
+                  return _inventoryCardStatic();
+                }
+                final total = items.length;
+                final toBuy = items.where((g) => !g.isAvailable).length;
+                final ready = total - toBuy;
+                final pct = total == 0 ? 84 : ((ready / total) * 100).round();
+
+                return _inventoryCard(
+                  readyPercent: pct,
+                  itemsToBuy: toBuy,
+                );
+              },
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
           ),
+          error: (e, s) => _inventoryCardStatic(),
         );
       },
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      ),
+      error: (e, s) => _inventoryCardStatic(),
     );
   }
 
-  // ─── FAB ───────────────────────────────────────────────────────────
-  Widget _buildFAB() {
+  Widget _inventoryCardStatic() {
+    return _inventoryCard(readyPercent: 84, itemsToBuy: 12);
+  }
+
+  Widget _inventoryCard({
+    required int readyPercent,
+    required int itemsToBuy,
+  }) {
     return Container(
-      width: 56,
-      height: 56,
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryContainer],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        shape: BoxShape.circle,
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.surfaceContainerHigh),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withAlpha(80),
+            color: Colors.black.withAlpha(8),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: FloatingActionButton(
-        onPressed: () => _showSelectRecipesDialog(),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Pantry Status',
+            style: AppTextStyles.h3.copyWith(color: AppColors.onBackground),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _bentoTile(
+                  label: 'Ready',
+                  value: '$readyPercent%',
+                  accent: AppColors.secondary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _bentoTile(
+                  label: 'To Buy',
+                  value: '$itemsToBuy Items',
+                  accent: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Auto-Sync Pantry (demo)')),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              icon: const Icon(Icons.sync, size: 20),
+              label: Text(
+                'Auto-Sync Pantry',
+                style: AppTextStyles.labelLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ─── BOTTOM NAV ───────────────────────────────────────────────────
+  Widget _bentoTile({
+    required String label,
+    required String value,
+    required Color accent,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(28),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withAlpha(80)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTextStyles.h3.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBottomNav(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -778,67 +723,424 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       ),
     );
   }
+}
 
-  // ─── HELPERS ──────────────────────────────────────────────────────
-  Future<List<GroceryItem>> _generateGroceryList(
-    MealPlan mealPlan,
-    List<String> currentIngredientIds,
-  ) async {
-    final service = ref.read(mealPlanServiceProvider);
-    return await service.generateGroceryList(
-      recipeIds: mealPlan.recipeIds,
-      currentIngredientIds: currentIngredientIds,
+class _MealPeriodBlock extends StatelessWidget {
+  const _MealPeriodBlock({
+    required this.title,
+    required this.meals,
+    required this.recipeMap,
+    required this.pantryIds,
+    required this.onAddRecipe,
+    required this.onQuickLog,
+    required this.onRemoveMeal,
+    required this.onStartCooking,
+    required this.onAddIngredients,
+    required this.onCheck,
+  });
+
+  final String title;
+  final List<PlannedMeal> meals;
+  final Map<String, Recipe> recipeMap;
+  final Set<String> pantryIds;
+  final VoidCallback onAddRecipe;
+  final VoidCallback onQuickLog;
+  final void Function(PlannedMeal)? onRemoveMeal;
+  final void Function(Recipe recipe) onStartCooking;
+  final void Function(Recipe recipe) onAddIngredients;
+  final VoidCallback onCheck;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTextStyles.h3.copyWith(
+            color: AppColors.onBackground,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (meals.isEmpty)
+          _EmptyMealSlot(onAddRecipe: onAddRecipe, onQuickLog: onQuickLog)
+        else
+          ...meals.map((planned) {
+            final recipe = recipeMap[planned.recipeId];
+            if (recipe == null) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _UnknownRecipeCard(
+                  planned: planned,
+                  onRemove: onRemoveMeal == null
+                      ? null
+                      : () => onRemoveMeal!(planned),
+                ),
+              );
+            }
+            final missing = _countMissingIngredients(recipe, pantryIds);
+            final stocked = _isFullyStocked(recipe, pantryIds);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _PlannedMealCard(
+                recipe: recipe,
+                planned: planned,
+                missingCount: missing,
+                inStock: stocked,
+                onRemove: onRemoveMeal == null
+                    ? null
+                    : () => onRemoveMeal!(planned),
+                onStartCooking: () => onStartCooking(recipe),
+                onAddIngredients: () => onAddIngredients(recipe),
+                onCheck: onCheck,
+              ),
+            );
+          }),
+      ],
     );
   }
+}
 
-  void _removeRecipeFromPlan(MealPlan mealPlan, String recipeId) async {
-    final user = ref.read(currentUserProvider);
-    if (user == null) return;
+class _EmptyMealSlot extends StatelessWidget {
+  const _EmptyMealSlot({
+    required this.onAddRecipe,
+    required this.onQuickLog,
+  });
 
-    final updatedIds =
-        mealPlan.recipeIds.where((id) => id != recipeId).toList();
-    final service = ref.read(mealPlanServiceProvider);
+  final VoidCallback onAddRecipe;
+  final VoidCallback onQuickLog;
 
-    if (updatedIds.isEmpty) {
-      await service.deleteMealPlan(mealPlan.id);
-    } else {
-      await service.createOrUpdateMealPlan(
-        userId: user.uid,
-        planDate: mealPlan.planDate,
-        recipeIds: updatedIds,
-        existingMealPlanId: mealPlan.id,
-      );
-    }
-  }
-
-  void _showSelectRecipesDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: _SelectRecipesBottomSheet(
-          selectedDate: _selectedDate,
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedRRectPainter(
+        color: AppColors.outlineVariant,
+        strokeWidth: 1.5,
+        radius: 20,
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton.icon(
+                  onPressed: onAddRecipe,
+                  icon: const Icon(Icons.add, color: AppColors.primary),
+                  label: Text(
+                    'Add Recipe',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: onQuickLog,
+                  icon: const Icon(Icons.edit_note, color: AppColors.outline),
+                  label: Text(
+                    'Quick Log',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// MEAL CARD WIDGET
-// ═══════════════════════════════════════════════════════════════════════
-class _MealCard extends StatelessWidget {
-  final Recipe recipe;
-  final String mealType;
-  final VoidCallback onRemove;
+class _DashedRRectPainter extends CustomPainter {
+  _DashedRRectPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.radius,
+  });
 
-  const _MealCard({
+  final Color color;
+  final double strokeWidth;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final r = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        strokeWidth / 2,
+        strokeWidth / 2,
+        size.width - strokeWidth,
+        size.height - strokeWidth,
+      ),
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(r);
+
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        const dash = 6.0;
+        const gap = 4.0;
+        final next = distance + dash;
+        canvas.drawPath(
+          metric.extractPath(
+            distance,
+            next > metric.length ? metric.length : next,
+          ),
+          paint,
+        );
+        distance = next + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRRectPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.radius != radius;
+  }
+}
+
+class _PlannedMealCard extends StatelessWidget {
+  const _PlannedMealCard({
     required this.recipe,
-    required this.mealType,
+    required this.planned,
+    required this.missingCount,
+    required this.inStock,
+    required this.onRemove,
+    required this.onStartCooking,
+    required this.onAddIngredients,
+    required this.onCheck,
+  });
+
+  final Recipe recipe;
+  final PlannedMeal planned;
+  final int missingCount;
+  final bool inStock;
+  final VoidCallback? onRemove;
+  final VoidCallback onStartCooking;
+  final VoidCallback onAddIngredients;
+  final VoidCallback onCheck;
+
+  @override
+  Widget build(BuildContext context) {
+    final greenBg = AppColors.secondary.withAlpha(36);
+    final greenBorder = AppColors.secondary.withAlpha(120);
+    final redBg = AppColors.error.withAlpha(28);
+    final redBorder = AppColors.error.withAlpha(100);
+
+    final bg = inStock ? greenBg : redBg;
+    final borderColor = inStock ? greenBorder : redBorder;
+    final statusLabel = inStock ? 'In Stock' : '$missingCount Missing';
+    final statusColor = inStock ? AppColors.secondary : AppColors.error;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(6),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RecipeImage(
+                imageUrl: recipe.imageUrl,
+                width: 72,
+                height: 72,
+                fit: BoxFit.cover,
+                iconSize: 30,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withAlpha(40),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            statusLabel,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: statusColor,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        if (onRemove != null)
+                          GestureDetector(
+                            onTap: onRemove,
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: const BoxDecoration(
+                                color: AppColors.surfaceContainerHigh,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                size: 14,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      recipe.name,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.onBackground,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${planned.servingTime} · ${planned.servings} servings',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Text(
+                'Shared with 2 others',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 8),
+              ...List.generate(2, (i) {
+                return Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: CircleAvatar(
+                    radius: 12,
+                    backgroundColor: AppColors.surfaceContainerHigh,
+                    backgroundImage: NetworkImage(_kSharedAvatarUrls[i]),
+                  ),
+                );
+              }),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (inStock) ...[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onCheck,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.secondary,
+                      side: const BorderSide(color: AppColors.secondary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('Check'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onStartCooking,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      foregroundColor: AppColors.onSecondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('Start Cooking'),
+                  ),
+                ),
+              ] else ...[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onAddIngredients,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('Add Ingredients'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.surfaceContainerHigh,
+                      foregroundColor: AppColors.outline,
+                      disabledBackgroundColor: AppColors.surfaceContainerHigh,
+                      disabledForegroundColor: AppColors.outline,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('Start'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnknownRecipeCard extends StatelessWidget {
+  const _UnknownRecipeCard({
+    required this.planned,
     required this.onRemove,
   });
+
+  final PlannedMeal planned;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -846,193 +1148,42 @@ class _MealCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(8),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Food Image
-          RecipeImage(
-            imageUrl: recipe.imageUrl,
-            width: 64,
-            height: 64,
-            fit: BoxFit.cover,
-            iconSize: 28,
-          ),
-          const SizedBox(width: 14),
-          // Text Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  mealType.toUpperCase(),
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    fontSize: 10,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  recipe.name,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.onBackground,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.timer_outlined,
-                      size: 14,
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${recipe.ingredientIds.length * 5}m',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(
-                      Icons.local_fire_department,
-                      size: 14,
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${recipe.ingredientIds.length * 50} kcal',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Remove button
-          GestureDetector(
-            onTap: onRemove,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close,
-                size: 16,
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// INGREDIENT CATEGORY ROW
-// ═══════════════════════════════════════════════════════════════════════
-class _IngredientCategoryRow extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBgColor;
-  final String title;
-  final String items;
-
-  const _IngredientCategoryRow({
-    required this.icon,
-    required this.iconColor,
-    required this.iconBgColor,
-    required this.title,
-    required this.items,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.surfaceContainerHigh,
-          width: 0.5,
-        ),
+        border: Border.all(color: AppColors.surfaceContainerHigh),
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 14),
+          const Icon(Icons.no_meals, color: AppColors.outline),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.onBackground,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  items,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            child: Text(
+              'Recipe not found (${planned.recipeId})',
+              style: AppTextStyles.bodySmall,
             ),
           ),
+          if (onRemove != null)
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: onRemove,
+            ),
         ],
       ),
     );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// NAV BAR ITEM
-// ═══════════════════════════════════════════════════════════════════════
 class _NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
   const _NavBarItem({
     required this.icon,
     required this.label,
     required this.isActive,
     required this.onTap,
   });
+
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1069,13 +1220,14 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// SELECT RECIPES BOTTOM SHEET
-// ═══════════════════════════════════════════════════════════════════════
 class _SelectRecipesBottomSheet extends ConsumerStatefulWidget {
-  final DateTime selectedDate;
+  const _SelectRecipesBottomSheet({
+    required this.selectedDate,
+    this.initialMealPeriod,
+  });
 
-  const _SelectRecipesBottomSheet({required this.selectedDate});
+  final DateTime selectedDate;
+  final String? initialMealPeriod;
 
   @override
   ConsumerState<_SelectRecipesBottomSheet> createState() =>
@@ -1084,31 +1236,142 @@ class _SelectRecipesBottomSheet extends ConsumerStatefulWidget {
 
 class _SelectRecipesBottomSheetState
     extends ConsumerState<_SelectRecipesBottomSheet> {
-  final Set<String> _selectedRecipeIds = {};
+  late String _selectedMealPeriod;
+  late TimeOfDay _servingTime;
+  int _servings = 2;
+  bool _pantryOnly = false;
   bool _isSaving = false;
   String _searchQuery = '';
+  final List<PlannedMeal> _pendingMeals = [];
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _mealNotesController = TextEditingController();
+
+  String? _reminderDraft;
+  final List<String> _prepReminders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedMealPeriod =
+        widget.initialMealPeriod ?? 'Dinner';
+    if (!_kMealPeriods.contains(_selectedMealPeriod)) {
+      _selectedMealPeriod = 'Dinner';
+    }
+    _servingTime = _defaultTimeForPeriod(_selectedMealPeriod);
+    _reminderDraft = '15 mins before';
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _mealNotesController.dispose();
     super.dispose();
+  }
+
+  PlannedMeal _buildPlannedMealFromRecipe(Recipe recipe) {
+    return PlannedMeal(
+      recipeId: recipe.id,
+      mealPeriod: _selectedMealPeriod,
+      servingTime: _formatTimeOfDay(_servingTime),
+      servings: _servings,
+      mealNotes: _mealNotesController.text,
+      prepReminders: List<String>.from(_prepReminders),
+    );
+  }
+
+  void _onMealPeriodChanged(String period) {
+    setState(() {
+      _selectedMealPeriod = period;
+      _servingTime = _defaultTimeForPeriod(period);
+    });
+  }
+
+  Future<void> _pickTime() async {
+    final t = await showTimePicker(
+      context: context,
+      initialTime: _servingTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: AppColors.onPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (t != null) {
+      setState(() => _servingTime = t);
+    }
+  }
+
+  void _addReminder() {
+    final v = _reminderDraft;
+    if (v == null || v.isEmpty) return;
+    setState(() {
+      if (!_prepReminders.contains(v)) {
+        _prepReminders.add(v);
+      }
+    });
+  }
+
+  Future<void> _confirm() async {
+    if (_pendingMeals.isEmpty || _isSaving) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final user = ref.read(currentUserProvider);
+      if (user == null) {
+        setState(() => _isSaving = false);
+        return;
+      }
+
+      final existingPlan =
+          await ref.read(mealPlanForDateProvider(widget.selectedDate).future);
+      final existing = existingPlan?.plannedMeals ?? const <PlannedMeal>[];
+
+      final merged = <PlannedMeal>[...existing, ..._pendingMeals];
+
+      final service = ref.read(mealPlanServiceProvider);
+      await service.createOrUpdateMealPlan(
+        userId: user.uid,
+        planDate: widget.selectedDate,
+        plannedMeals: merged,
+        existingMealPlanId: existingPlan?.id,
+      );
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving plan: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final recipesAsync = ref.watch(userRecipesProvider);
+    final pantryAsync = ref.watch(currentIngredientIdsProvider);
 
     return Container(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.92,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           const SizedBox(height: 12),
           Container(
             width: 40,
@@ -1118,9 +1381,7 @@ class _SelectRecipesBottomSheetState
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 20),
-
-          // Header
+          const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
@@ -1130,16 +1391,14 @@ class _SelectRecipesBottomSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Select Recipes',
+                        'Add to Meal Planner',
                         style: AppTextStyles.h3.copyWith(
                           color: AppColors.onBackground,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('EEEE, MMMM d').format(
-                          widget.selectedDate,
-                        ),
+                        'Scheduling for ${DateFormat('EEEE, MMM d').format(widget.selectedDate)}',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.onSurfaceVariant,
                         ),
@@ -1166,192 +1425,450 @@ class _SelectRecipesBottomSheetState
               ],
             ),
           ),
-          const SizedBox(height: 20),
-
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() => _searchQuery = v),
-              decoration: InputDecoration(
-                hintText: 'Search your recipes...',
-                hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.outline),
-                prefixIcon: const Icon(Icons.search, color: AppColors.outline),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? GestureDetector(
-                        onTap: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                        child: const Icon(Icons.close, color: AppColors.outline, size: 18))
-                    : null,
-                filled: true,
-                fillColor: AppColors.surfaceContainerLowest,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: const BorderSide(color: AppColors.surfaceContainerHigh)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-          ),
           const SizedBox(height: 16),
-
-          // Recipe list
-          Flexible(
-            child: recipesAsync.when(
-              data: (recipes) {
-                final filteredRecipes = recipes.where((r) => 
-                  r.name.toLowerCase().contains(_searchQuery.toLowerCase())
-                ).toList();
-
-                if (filteredRecipes.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _searchQuery.isEmpty ? Icons.restaurant_menu : Icons.search_off,
-                          size: 56,
-                          color: AppColors.onSurfaceVariant.withAlpha(80),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _searchQuery.isEmpty ? 'No recipes yet' : 'No recipes found',
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _searchQuery.isEmpty 
-                            ? 'Create a recipe first to plan meals'
-                            : 'Try searching for something else',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.outline,
-                          ),
-                        ),
-                      ],
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Meal Period',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: filteredRecipes.length,
-                  itemBuilder: (context, index) {
-                    final recipe = filteredRecipes[index];
-                    final isSelected =
-                        _selectedRecipeIds.contains(recipe.id);
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedRecipeIds.remove(recipe.id);
-                          } else {
-                            _selectedRecipeIds.add(recipe.id);
-                          }
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary.withAlpha(12)
-                              : AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: isSelected
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _kMealPeriods.map((p) {
+                      final selected = _selectedMealPeriod == p;
+                      return ChoiceChip(
+                        label: Text(
+                          p,
+                          style: TextStyle(
+                            fontSize: p == 'Afternoon Snacks' ? 11 : 13,
+                            fontWeight: FontWeight.w600,
+                            color: selected
+                                ? AppColors.onPrimary
+                                : AppColors.onBackground,
+                          ),
+                        ),
+                        selected: selected,
+                        onSelected: (_) => _onMealPeriodChanged(p),
+                        selectedColor: AppColors.primary,
+                        backgroundColor: AppColors.surfaceContainerLowest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: selected
                                 ? AppColors.primary
                                 : AppColors.surfaceContainerHigh,
-                            width: isSelected ? 1.5 : 0.5,
                           ),
                         ),
-                        child: Row(
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            RecipeImage(
-                              imageUrl: recipe.imageUrl,
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
-                              iconSize: 22,
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    recipe.name,
-                                    style:
-                                        AppTextStyles.labelLarge.copyWith(
-                                      color: AppColors.onBackground,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${recipe.ingredientIds.length} ingredients',
-                                    style:
-                                        AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
+                            Text(
+                              'Serving Time',
+                              style: AppTextStyles.labelLarge.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : Colors.transparent,
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : AppColors.outlineVariant,
-                                  width: 2,
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: _pickTime,
+                              icon: const Icon(Icons.schedule, size: 18),
+                              label: Text(_formatTimeOfDay(_servingTime)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.onBackground,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
-                              child: isSelected
-                                  ? const Icon(
-                                      Icons.check,
-                                      size: 16,
-                                      color: Colors.white,
-                                    )
-                                  : null,
                             ),
                           ],
                         ),
                       ),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Servings',
+                            style: AppTextStyles.labelLarge.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              IconButton.filled(
+                                style: IconButton.styleFrom(
+                                  backgroundColor: AppColors.surfaceContainerHigh,
+                                  foregroundColor: AppColors.onBackground,
+                                ),
+                                onPressed: _servings > 1
+                                    ? () => setState(() => _servings--)
+                                    : null,
+                                icon: const Icon(Icons.remove, size: 18),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  '$_servings',
+                                  style: AppTextStyles.h4.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              IconButton.filled(
+                                style: IconButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: AppColors.onPrimary,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _servings++),
+                                icon: const Icon(Icons.add, size: 18),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Recipes to Add',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                    decoration: InputDecoration(
+                      hintText: 'Search recipes...',
+                      hintStyle: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.outline,
+                      ),
+                      prefixIcon:
+                          const Icon(Icons.search, color: AppColors.outline),
+                      filled: true,
+                      fillColor: AppColors.surfaceContainerLowest,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        'Pantry Only',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Switch(
+                        value: _pantryOnly,
+                        activeTrackColor: AppColors.primary.withAlpha(160),
+                        activeThumbColor: AppColors.onPrimary,
+                        onChanged: (v) => setState(() => _pantryOnly = v),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_pendingMeals.isNotEmpty) ...[
+                    Text(
+                      'Selected',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ReorderableListView(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) newIndex--;
+                          final item = _pendingMeals.removeAt(oldIndex);
+                          _pendingMeals.insert(newIndex, item);
+                        });
+                      },
+                      children: [
+                        for (var i = 0; i < _pendingMeals.length; i++)
+                          _PendingMealRow(
+                            key: ValueKey(
+                              '${_pendingMeals[i].recipeId}_${i}_${_pendingMeals[i].mealPeriod}',
+                            ),
+                            planned: _pendingMeals[i],
+                            recipesAsync: recipesAsync,
+                            onDelete: () {
+                              setState(() => _pendingMeals.removeAt(i));
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  recipesAsync.when(
+                    data: (recipes) {
+                      return pantryAsync.when(
+                        data: (pantryIds) {
+                          final pantrySet = pantryIds.toSet();
+                          var filtered = recipes
+                              .where(
+                                (r) => r.name.toLowerCase().contains(
+                                      _searchQuery.toLowerCase(),
+                                    ),
+                              )
+                              .toList();
+                          if (_pantryOnly) {
+                            filtered = filtered
+                                .where(
+                                  (r) => _isFullyStocked(r, pantrySet),
+                                )
+                                .toList();
+                          }
+
+                          if (filtered.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              child: Center(
+                                child: Text(
+                                  _searchQuery.isEmpty
+                                      ? 'No recipes'
+                                      : 'No matching recipes',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filtered.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final recipe = filtered[index];
+                              return Material(
+                                color: AppColors.surfaceContainerLowest,
+                                borderRadius: BorderRadius.circular(16),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () {
+                                    setState(() {
+                                      _pendingMeals.add(
+                                        _buildPlannedMealFromRecipe(recipe),
+                                      );
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Row(
+                                      children: [
+                                        RecipeImage(
+                                          imageUrl: recipe.imageUrl,
+                                          width: 44,
+                                          height: 44,
+                                          fit: BoxFit.cover,
+                                          iconSize: 20,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                recipe.name,
+                                                style: AppTextStyles
+                                                    .labelLarge
+                                                    .copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              Text(
+                                                '${recipe.ingredientIds.length} ingredients',
+                                                style: AppTextStyles.bodySmall
+                                                    .copyWith(
+                                                  color: AppColors
+                                                      .onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(
+                                          Icons.add_circle_outline,
+                                          color: AppColors.primary,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        loading: () => const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        error: (e, s) => const SizedBox.shrink(),
+                      );
+                    },
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    error: (e, _) => Text('Error: $e'),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Meal Notes',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _mealNotesController,
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Notes for this meal block...',
+                      filled: true,
+                      fillColor: AppColors.surfaceContainerLowest,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Prep Reminders',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _reminderDraft,
+                            items: const [
+                              DropdownMenuItem(
+                                value: '15 mins before',
+                                child: Text('15 mins before'),
+                              ),
+                              DropdownMenuItem(
+                                value: '30 mins before',
+                                child: Text('30 mins before'),
+                              ),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _reminderDraft = v),
+                          ),
+                        ),
+                      ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: _addReminder,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.onPrimary,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                  if (_prepReminders.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _prepReminders.map((r) {
+                        return Chip(
+                          label: Text(r),
+                          onDeleted: () {
+                            setState(() => _prepReminders.remove(r));
+                          },
+                          deleteIconColor: AppColors.onSurfaceVariant,
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                ],
               ),
-              error: (e, s) => Center(child: Text('Error: $e')),
             ),
           ),
-
-          // Bottom action
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
             decoration: BoxDecoration(
               color: AppColors.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(5),
+                  color: Colors.black.withAlpha(8),
                   blurRadius: 8,
                   offset: const Offset(0, -2),
                 ),
@@ -1361,86 +1878,31 @@ class _SelectRecipesBottomSheetState
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_selectedRecipeIds.isEmpty || _isSaving)
-                      ? null
-                      : () async {
-                          setState(() => _isSaving = true);
-                          try {
-                            final user = ref.read(currentUserProvider);
-                            if (user == null) {
-                              setState(() => _isSaving = false);
-                              return;
-                            }
-
-                            final service = ref.read(mealPlanServiceProvider);
-
-                            // Using the provider instead of direct service call to avoid potentially broken Firestore query (e.g. missing index)
-                            // and leverage already-watched data
-                            final existingPlan = ref
-                                .read(
-                                  mealPlanForDateProvider(widget.selectedDate),
-                                )
-                                .value;
-
-                            final allRecipeIds = <String>{
-                              ...?existingPlan?.recipeIds,
-                              ..._selectedRecipeIds,
-                            }.toList();
-
-                            await service.createOrUpdateMealPlan(
-                              userId: user.uid,
-                              planDate: widget.selectedDate,
-                              recipeIds: allRecipeIds,
-                              existingMealPlanId: existingPlan?.id,
-                            );
-
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error adding recipes: $e'),
-                                  backgroundColor: Colors.redAccent,
-                                ),
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isSaving = false);
-                            }
-                          }
-                        },
+                  onPressed:
+                      (_pendingMeals.isEmpty || _isSaving) ? null : _confirm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.onPrimary,
-                    disabledBackgroundColor:
-                        AppColors.primary.withAlpha(100),
-                    disabledForegroundColor:
-                        AppColors.onPrimary.withAlpha(100),
-                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    disabledBackgroundColor: AppColors.primary.withAlpha(100),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(32),
+                      borderRadius: BorderRadius.circular(28),
                     ),
-                    elevation: 0,
                   ),
                   child: _isSaving
                       ? const SizedBox(
-                          height: 20,
-                          width: 20,
+                          height: 22,
+                          width: 22,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
                             strokeWidth: 2,
+                            color: AppColors.onPrimary,
                           ),
                         )
                       : Text(
-                          _selectedRecipeIds.isEmpty
-                              ? 'Select recipes to plan'
-                              : 'Add ${_selectedRecipeIds.length} Recipe${_selectedRecipeIds.length != 1 ? "s" : ""} to Plan',
+                          'Confirm Selection',
                           style: AppTextStyles.labelLarge.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: AppColors.onPrimary,
                           ),
                         ),
                 ),
@@ -1449,6 +1911,73 @@ class _SelectRecipesBottomSheetState
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PendingMealRow extends ConsumerWidget {
+  const _PendingMealRow({
+    super.key,
+    required this.planned,
+    required this.recipesAsync,
+    required this.onDelete,
+  });
+
+  final PlannedMeal planned;
+  final AsyncValue<List<Recipe>> recipesAsync;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return recipesAsync.when(
+      data: (recipes) {
+        final matches =
+            recipes.where((r) => r.id == planned.recipeId);
+        final recipe = matches.isEmpty ? null : matches.first;
+        final name = recipe?.name ?? planned.recipeId;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.surfaceContainerHigh),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.drag_handle, color: AppColors.outline),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${planned.mealPeriod} · ${planned.servingTime}',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                onPressed: onDelete,
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (e, s) => const SizedBox.shrink(),
     );
   }
 }

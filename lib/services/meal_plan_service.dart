@@ -49,13 +49,14 @@ class MealPlanService {
   Future<String> createOrUpdateMealPlan({
     required String userId,
     required DateTime planDate,
-    required List<String> recipeIds,
+    required List<PlannedMeal> plannedMeals,
     String? existingMealPlanId,
   }) async {
     if (existingMealPlanId != null) {
       // Update existing meal plan
       await _firestore.collection('mealPlans').doc(existingMealPlanId).update({
-        'recipeIds': recipeIds,
+        'plannedMeals': plannedMeals.map((m) => m.toMap()).toList(),
+        'recipeIds': plannedMeals.map((m) => m.recipeId).toList(),
       });
       return existingMealPlanId;
     } else {
@@ -65,7 +66,7 @@ class MealPlanService {
         id: docRef.id,
         userId: userId,
         planDate: planDate,
-        recipeIds: recipeIds,
+        plannedMeals: plannedMeals,
         createdAt: DateTime.now(),
       );
 

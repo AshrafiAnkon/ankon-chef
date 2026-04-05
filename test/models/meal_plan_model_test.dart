@@ -11,7 +11,11 @@ void main() {
         id: 'plan1',
         userId: 'user1',
         planDate: planDate,
-        recipeIds: const ['recipe1', 'recipe2', 'recipe3'],
+        plannedMeals: const [
+          PlannedMeal(recipeId: 'recipe1'),
+          PlannedMeal(recipeId: 'recipe2'),
+          PlannedMeal(recipeId: 'recipe3'),
+        ],
         createdAt: now,
       );
 
@@ -26,11 +30,14 @@ void main() {
         id: 'plan1',
         userId: 'user1',
         planDate: now,
-        recipeIds: const ['recipe1'],
+        plannedMeals: const [PlannedMeal(recipeId: 'recipe1')],
         createdAt: now,
       );
 
-      final updated = original.copyWith(recipeIds: ['recipe1', 'recipe2']);
+      final updated = original.copyWith(plannedMeals: [
+        const PlannedMeal(recipeId: 'recipe1'),
+        const PlannedMeal(recipeId: 'recipe2'),
+      ]);
 
       expect(updated.recipeIds.length, 2);
       expect(updated.id, original.id);
