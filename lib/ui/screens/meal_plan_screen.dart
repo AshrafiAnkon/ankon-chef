@@ -129,7 +129,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: _SelectRecipesBottomSheet(
+        child: SelectRecipesBottomSheet(
           selectedDate: _selectedDate,
           initialMealPeriod: initialMealPeriod,
         ),
@@ -1245,22 +1245,25 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-class _SelectRecipesBottomSheet extends ConsumerStatefulWidget {
-  const _SelectRecipesBottomSheet({
+class SelectRecipesBottomSheet extends ConsumerStatefulWidget {
+  const SelectRecipesBottomSheet({
+    super.key,
     required this.selectedDate,
     this.initialMealPeriod,
+    this.initialSuggestedRecipe,
   });
 
   final DateTime selectedDate;
   final String? initialMealPeriod;
+  final Recipe? initialSuggestedRecipe;
 
   @override
-  ConsumerState<_SelectRecipesBottomSheet> createState() =>
+  ConsumerState<SelectRecipesBottomSheet> createState() =>
       _SelectRecipesBottomSheetState();
 }
 
 class _SelectRecipesBottomSheetState
-    extends ConsumerState<_SelectRecipesBottomSheet> {
+    extends ConsumerState<SelectRecipesBottomSheet> {
   late String _selectedMealPeriod;
   late TimeOfDay _servingTime;
   int _servings = 2;
@@ -1283,6 +1286,19 @@ class _SelectRecipesBottomSheetState
     }
     _servingTime = _defaultTimeForPeriod(_selectedMealPeriod);
     _reminderDraft = '15 mins before';
+
+    // Auto-add suggested recipe if provided (from home screen suggestion)
+    if (widget.initialSuggestedRecipe != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _pendingMeals.add(
+              _buildPlannedMealFromRecipe(widget.initialSuggestedRecipe!),
+            );
+          });
+        }
+      });
+    }
   }
 
   @override

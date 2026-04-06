@@ -7,6 +7,7 @@ import '../theme/app_text_styles.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../widgets/settings_bottom_sheet.dart';
+import 'meal_plan_screen.dart';
 import '../widgets/recipe_image.dart';
 
 import '../../models/user_model.dart';
@@ -494,33 +495,103 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     return mealPlanAsync.when(
       data: (mealPlan) {
         if (mealPlan == null || mealPlan.plannedMeals.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                children: [
-                  const Icon(Icons.calendar_today, size: 48, color: AppColors.outline),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No meals planned for today.',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.onSurfaceVariant,
+          return recipesAsync.when(
+            data: (allRecipes) {
+              if (allRecipes.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.calendar_today, size: 48, color: AppColors.outline),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No meals planned for today.',
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Add some recipes to get started',
+                          style: TextStyle(color: AppColors.onSurfaceVariant),
+                        ),
+                      ],
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () => context.push('/meal-plan'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add to Planner'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.onPrimary,
-                    ),
+                );
+              }
+
+              // Nondeterministic suggestion: pick a random recipe
+              final random = DateTime.now().millisecond % allRecipes.length;
+              final suggestedRecipe = allRecipes[random];
+
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.lightbulb_outline, size: 48, color: AppColors.primary),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Suggestion for today',
+                        style: AppTextStyles.h3.copyWith(color: AppColors.onBackground),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        suggestedRecipe.name,
+                        style: AppTextStyles.labelLarge.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onBackground,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // Open add-to-planner sheet with pre-selected recipe and appropriate time slot
+                          final now = TimeOfDay.now();
+                          String initialPeriod = 'Dinner';
+                          if (now.hour < 11) {
+                            initialPeriod = 'Breakfast';
+                          } else if (now.hour < 15) {
+                            initialPeriod = 'Lunch';
+                          } else if (now.hour < 17) {
+                            initialPeriod = 'Afternoon Snacks';
+                          }
+
+                          showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => Padding(
+                              padding: EdgeInsets.only(
+                                bottom: MediaQuery.of(context).viewInsets.bottom,
+                              ),
+                              child: SelectRecipesBottomSheet(
+                                selectedDate: DateTime.now(),
+                                initialMealPeriod: initialPeriod,
+                                initialSuggestedRecipe: suggestedRecipe,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text('Add this to today\'s plan'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.onPrimary,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => const Center(child: Text('Could not load suggestions')),
           );
         }
 
