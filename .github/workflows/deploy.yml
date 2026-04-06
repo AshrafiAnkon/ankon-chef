@@ -36,9 +36,10 @@ jobs:
         run: flutter build web --release --wasm
 
       - name: Deploy to Firebase
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-          projectId: ankons-dream
-          channelId: live
+        run: |
+          npm install -g firebase-tools
+          echo "$FIREBASE_SERVICE_ACCOUNT" > service_account.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/service_account.json
+          firebase deploy --project ankons-dream --non-interactive
+        env:
+          FIREBASE_SERVICE_ACCOUNT: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
