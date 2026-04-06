@@ -119,36 +119,10 @@ Future<List<Recipe>> filteredRecipes(
     return [];
   }
 
-  // Get the first emission from userRecipesProvider
-  final recipesAsync = ref.watch(userRecipesProvider);
-  final recipes = await recipesAsync.when(
-    data: (r) => Future.value(r),
-    loading: () async {
-      // Wait for the next value
-      final stream = ref.watch(userRecipesProvider);
-      return stream.when(
-        data: (r) => Future.value(r),
-        loading: () => Future.value(<Recipe>[]),
-        error: (_, _) => Future.value(<Recipe>[]),
-      );
-    },
-    error: (_, _) => Future.value(<Recipe>[]),
-  );
+  final recipes = await ref.watch(userRecipesProvider.future);
 
   // Get pantry items
-  final pantryItemsAsync = ref.watch(pantryItemsProvider);
-  final pantryItems = await pantryItemsAsync.when(
-    data: (p) => Future.value(p),
-    loading: () async {
-      final stream = ref.watch(pantryItemsProvider);
-      return stream.when(
-        data: (p) => Future.value(p),
-        loading: () => Future.value(<PantryItem>[]),
-        error: (_, _) => Future.value(<PantryItem>[]),
-      );
-    },
-    error: (_, _) => Future.value(<PantryItem>[]),
-  );
+  final pantryItems = await ref.watch(pantryItemsProvider.future);
 
   final pantryIngredientIds = pantryItems
       .map((item) => item.ingredientId)
@@ -235,24 +209,13 @@ class ActiveFilterOptions extends _$ActiveFilterOptions {
 /// Get pantry ingredients (ingredient details from pantry items)
 @riverpod
 Future<List<Ingredient>> pantryIngredients(Ref ref) async {
-  final pantryItemsAsync = ref.watch(pantryItemsProvider);
-  final pantryItems = await pantryItemsAsync.when(
-    data: (items) => Future.value(items),
-    loading: () async {
-      try {
-        return await ref.watch(pantryItemsProvider.future);
-      } catch (_) {
-        return <PantryItem>[];
-      }
-    },
-    error: (_, _) async {
-      try {
-        return await ref.watch(pantryItemsProvider.future);
-      } catch (_) {
-        return <PantryItem>[];
-      }
-    },
-  );
+  List<PantryItem> pantryItems = [];
+  try {
+    pantryItems = await ref.watch(pantryItemsProvider.future);
+  } catch (_) {
+    // Return empty if there's an error fetching pantry items
+  }
+  
   final allIngredients = await ref.watch(allIngredientsProvider.future);
 
   final pantryIngredientIds = pantryItems

@@ -68,7 +68,7 @@ final class FilteredRecipesProvider
   }
 }
 
-String _$filteredRecipesHash() => r'8c2e7e9b1c98aba82d947695332d82d444e1028a';
+String _$filteredRecipesHash() => r'9a707af73506a37b903d748a020f06605bab234e';
 
 /// Filtered recipes based on filter options
 
@@ -193,4 +193,4 @@ final class PantryIngredientsProvider
   }
 }
 
-String _$pantryIngredientsHash() => r'4768d5d842919ae7f9784a808962ad6daafc32dc';
+String _$pantryIngredientsHash() => r'e287d32202e9faf0ee406f828aeb1e8a8b3f65d0';

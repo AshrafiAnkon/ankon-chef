@@ -85,3 +85,21 @@ Future<Recipe?> recipeById(Ref ref, String recipeId) async {
   final service = ref.watch(recipeServiceProvider);
   return service.getRecipeById(recipeId);
 }
+
+/// All unique tags from user's recipes
+@riverpod
+Future<List<String>> allRecipeTags(Ref ref) async {
+  final recipes = await ref.watch(userRecipesProvider.future);
+  final Set<String> tags = {};
+  for (final recipe in recipes) {
+    for (final tag in recipe.tags) {
+      if (tag.trim().isNotEmpty) {
+        tags.add(tag.trim());
+      }
+    }
+  }
+  
+  // Sort alphabetically or return as is
+  final sortedTags = tags.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return sortedTags;
+}

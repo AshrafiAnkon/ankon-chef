@@ -351,3 +351,47 @@ final class RecipeByIdFamily extends $Family
   @override
   String toString() => r'recipeByIdProvider';
 }
+
+/// All unique tags from user's recipes
+
+@ProviderFor(allRecipeTags)
+final allRecipeTagsProvider = AllRecipeTagsProvider._();
+
+/// All unique tags from user's recipes
+
+final class AllRecipeTagsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<String>>,
+          List<String>,
+          FutureOr<List<String>>
+        >
+    with $FutureModifier<List<String>>, $FutureProvider<List<String>> {
+  /// All unique tags from user's recipes
+  AllRecipeTagsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'allRecipeTagsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$allRecipeTagsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<String>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<String>> create(Ref ref) {
+    return allRecipeTags(ref);
+  }
+}
+
+String _$allRecipeTagsHash() => r'c08237651aa4847b177e455349f660cbe0da83a7';

@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/pantry_ingredient_multi_select.dart';
 import '../../providers/filter_recipe_provider.dart';
+import '../../providers/recipe_provider.dart';
 import '../../models/ingredient_model.dart';
 import '../../models/recipe_model.dart';
 import '../widgets/recipe_image.dart';
@@ -28,17 +29,6 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
   final TextEditingController _tagSearchController = TextEditingController();
   String _tagSearchQuery = '';
   List<String> _selectedTags = [];
-  final List<String> _availableTags = [
-    'Vegan',
-    'Dinner',
-    'Quick & Easy',
-    'Gluten-Free',
-    'Keto',
-    'Breakfast',
-    'Lunch',
-    'Dessert',
-    'Main Course'
-  ];
 
   bool _nutritionToggle = true;
   double _maxPrepTime = 30; // up to 120
@@ -109,13 +99,6 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
       _showFavorites = false;
     });
     _updateGlobalFilters();
-  }
-
-  List<String> get _filteredTags {
-    if (_tagSearchQuery.isEmpty) return _availableTags;
-    return _availableTags
-        .where((t) => t.toLowerCase().contains(_tagSearchQuery.toLowerCase()))
-        .toList();
   }
 
   @override
@@ -467,6 +450,8 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
   }
 
   Widget _buildFilterByTagsSection() {
+    final allTagsAsync = ref.watch(allRecipeTagsProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -496,17 +481,42 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          clipBehavior: Clip.none,
-          child: Row(
-            children: [
-              for (var i = 0; i < _filteredTags.length; i++) ...[
-                _buildTagChip(_filteredTags[i]),
-                if (i < _filteredTags.length - 1) const SizedBox(width: 12),
-              ]
-            ],
-          ),
+        allTagsAsync.when(
+          data: (tags) {
+            List<String> displayTags = [];
+            if (_tagSearchQuery.isNotEmpty) {
+              displayTags = tags
+                  .where((t) => t.toLowerCase().contains(_tagSearchQuery.toLowerCase()))
+                  .toList();
+            } else {
+              // Show top 5 tags + any currently selected tags
+              final topTags = tags.take(5).toList();
+              final Set<String> tagsToShow = {...topTags, ..._selectedTags};
+              displayTags = tagsToShow.toList();
+            }
+
+            if (displayTags.isEmpty) {
+              return Text(
+                'No tags found.',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onSurfaceVariant),
+              );
+            }
+
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              child: Row(
+                children: [
+                  for (var i = 0; i < displayTags.length; i++) ...[
+                    _buildTagChip(displayTags[i]),
+                    if (i < displayTags.length - 1) const SizedBox(width: 12),
+                  ]
+                ],
+              ),
+            );
+          },
+          loading: () => const CircularProgressIndicator(),
+          error: (e, s) => Text('Error loading tags: $e', style: AppTextStyles.bodySmall),
         ),
       ],
     );
