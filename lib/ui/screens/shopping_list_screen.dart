@@ -222,7 +222,7 @@ class ShoppingListScreen extends ConsumerWidget {
                           category: 'From meal plan',
                           amount: 'Needed',
                         );
-                      }).toList(),
+                      }),
                       const SizedBox(height: 48),
                       Container(
                         padding: const EdgeInsets.all(24),
