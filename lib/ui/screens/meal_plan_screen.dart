@@ -15,9 +15,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/recipe_image.dart';
 
-const _kAppBarAvatarUrl =
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuCKPrAKao3Dx84rEyi1AfJEV0SKzYQRBzHk8jCPUcIkT6EFIzxh4AFpehx6-IyEaby4qRInGub6FueKfeHdaKHU5rXHAvqwHDqa6l-aUEf4XPWsKSZ3O-YtYWP4utZDQs6Fl1AMzoNvRLMZgycWjWhNdFC8mDAgH06QOXD1A7xwT8BjeQkqX0BDsOQraqMZJVeVqKIjnLaefsKfFBdSrlH9T2EOCznFo-cI0XPD4HFFudHoifVPDWtChBpeI-V8RngHaWuI0f2wp7ui';
-
 const _kMealPeriods = <String>[
   'Breakfast',
   'Lunch',
@@ -198,17 +195,11 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    _kAppBarAvatarUrl,
+                  child: Image.asset(
+                    'assets/images/app_logo.png',
                     width: 40,
                     height: 40,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 40,
-                      height: 40,
-                      color: AppColors.surfaceContainerHigh,
-                      child: const Icon(Icons.person, color: AppColors.outline),
-                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -517,6 +508,8 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                   .generateGroceryList(
                     recipeIds: mealPlan.recipeIds,
                     currentIngredientIds: pantryIds,
+                    shoppingListExclusions: mealPlan.shoppingListExclusions,
+                    shoppingListOverrides: mealPlan.shoppingListOverrides,
                   ),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
@@ -538,7 +531,11 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                 final ready = total - toBuy;
                 final pct = total == 0 ? 84 : ((ready / total) * 100).round();
 
-                return _inventoryCard(mealPlan: mealPlan, readyPercent: pct, itemsToBuy: toBuy);
+                return _inventoryCard(
+                  mealPlan: mealPlan,
+                  readyPercent: pct,
+                  itemsToBuy: toBuy,
+                );
               },
             );
           },
@@ -562,7 +559,12 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   }
 
   Widget _inventoryCardStatic(MealPlan? mealPlan) {
-    return _inventoryCard(mealPlan: mealPlan, readyPercent: 0, itemsToBuy: 0, isLoading: true);
+    return _inventoryCard(
+      mealPlan: mealPlan,
+      readyPercent: 0,
+      itemsToBuy: 0,
+      isLoading: true,
+    );
   }
 
   Widget _inventoryCard({
@@ -621,14 +623,19 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                   ? null
                   : () async {
                       if (mealPlan == null) return;
-                      
+
                       final service = ref.read(mealPlanServiceProvider);
-                      await service.updateShoppingListExclusions(mealPlan.id, []);
+                      await service.updateShoppingListExclusions(
+                        mealPlan.id,
+                        [],
+                      );
 
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('All missing items added to shopping list'),
+                            content: Text(
+                              'All missing items added to shopping list',
+                            ),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -644,7 +651,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               ),
               icon: const Icon(Icons.add_shopping_cart, size: 20),
               label: Text(
-                'Add All Items to Shopping List',
+                'Add Missing Items to Shopping List',
                 style: AppTextStyles.labelLarge.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -824,14 +831,19 @@ class _MealPeriodBlock extends StatelessWidget {
                   final currentPlan = mealPlan;
                   if (currentPlan == null) return;
                   final service = ref.read(mealPlanServiceProvider);
-                  final currentExclusions = List<String>.from(currentPlan.shoppingListExclusions);
-                  
+                  final currentExclusions = List<String>.from(
+                    currentPlan.shoppingListExclusions,
+                  );
+
                   // Remove this recipe's ingredients from deletions if they were excluded
                   for (final ingredientId in recipe.ingredientIds) {
                     currentExclusions.remove(ingredientId);
                   }
 
-                  await service.updateShoppingListExclusions(currentPlan.id, currentExclusions);
+                  await service.updateShoppingListExclusions(
+                    currentPlan.id,
+                    currentExclusions,
+                  );
                 },
               ),
             );

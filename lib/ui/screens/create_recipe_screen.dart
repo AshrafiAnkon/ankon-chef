@@ -48,7 +48,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
   // Web search state
   final ValueNotifier<bool> _isSearchingNotifier = ValueNotifier(false);
-  final ValueNotifier<List<Map<String, dynamic>>> _searchResultsNotifier = ValueNotifier([]);
+  final ValueNotifier<List<Map<String, dynamic>>> _searchResultsNotifier =
+      ValueNotifier([]);
 
   @override
   void initState() {
@@ -87,7 +88,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
           if (recipe.ingredientQuantities != null) {
             recipe.ingredientQuantities!.forEach((id, qty) {
-              _quantityAmountControllers[id] = TextEditingController(text: qty.amount.toString());
+              _quantityAmountControllers[id] = TextEditingController(
+                text: qty.amount.toString(),
+              );
               _quantityUnits[id] = qty.unit;
             });
           }
@@ -173,7 +176,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       final Map<String, RecipeQuantity> ingredientQuantities = {};
       for (var id in _selectedIngredientIds) {
         ingredientQuantities[id] = RecipeQuantity(
-          amount: double.tryParse(_quantityAmountControllers[id]?.text ?? '') ?? 0.0,
+          amount:
+              double.tryParse(_quantityAmountControllers[id]?.text ?? '') ??
+              0.0,
           unit: _quantityUnits[id] ?? 'pcs',
         );
       }
@@ -191,7 +196,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           ingredientQuantities: ingredientQuantities,
           imageBytes: _imageBytes,
           imageUrl: _webImageUrl,
-          youtubeUrl: _youtubeController.text.trim().isEmpty ? null : _youtubeController.text.trim(),
+          youtubeUrl: _youtubeController.text.trim().isEmpty
+              ? null
+              : _youtubeController.text.trim(),
         );
       } else {
         await recipeService
@@ -207,7 +214,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               ingredientQuantities: ingredientQuantities,
               imageBytes: _imageBytes,
               imageUrl: _webImageUrl,
-              youtubeUrl: _youtubeController.text.trim().isEmpty ? null : _youtubeController.text.trim(),
+              youtubeUrl: _youtubeController.text.trim().isEmpty
+                  ? null
+                  : _youtubeController.text.trim(),
             )
             .timeout(
               const Duration(seconds: 15),
@@ -264,9 +273,42 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   // Helper to parse string to RecipeQuantity
   RecipeQuantity _parseMeasure(String measure) {
     if (measure.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pcs');
-    final parts = measure.trim().split(' ');
+
+    measure = measure.trim();
+    // Regex to split amount and unit even if there's no space (e.g. "150g" -> "150", "g")
+    final match = RegExp(r'^([\d.,/]+)\s*([a-zA-Z\s]*)$').firstMatch(measure);
+
+    if (match != null) {
+      final amountStr = match.group(1);
+      final unitStr = match.group(2)?.trim();
+
+      double? parsedAmount;
+      if (amountStr != null) {
+        if (amountStr.contains('/')) {
+          final parts = amountStr.split('/');
+          if (parts.length == 2) {
+            final num = double.tryParse(parts[0]);
+            final den = double.tryParse(parts[1]);
+            if (num != null && den != null && den != 0) {
+              parsedAmount = num / den;
+            }
+          }
+        } else {
+          parsedAmount = double.tryParse(amountStr);
+        }
+      }
+
+      if (parsedAmount != null) {
+        return RecipeQuantity(
+          amount: parsedAmount,
+          unit: (unitStr != null && unitStr.isNotEmpty) ? unitStr : 'pcs',
+        );
+      }
+    }
+
+    final parts = measure.split(' ');
     if (parts.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pcs');
-    
+
     final parsedAmount = double.tryParse(parts.first);
     if (parsedAmount != null) {
       if (parts.length > 1) {
@@ -277,11 +319,14 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       }
       return RecipeQuantity(amount: parsedAmount, unit: 'pcs');
     }
-    
+
     return RecipeQuantity(amount: 0, unit: measure);
   }
 
-  Future<void> _importRecipe(Map<String, dynamic> meal, {bool imageOnly = false}) async {
+  Future<void> _importRecipe(
+    Map<String, dynamic> meal, {
+    bool imageOnly = false,
+  }) async {
     if (imageOnly) {
       setState(() {
         _webImageUrl = _sanitizeImageUrl(meal['strMealThumb'] ?? '');
@@ -330,10 +375,10 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       _quantityUnits.clear();
 
       final ingredientService = ref.read(ingredientServiceProvider);
-      
+
       // Fetch all existing ingredients to do smart matching
       final allIngredients = await ingredientService.getAllIngredientsFuture();
-      
+
       // Parse raw ingredients, deduplicate (case-insensitive) and combine measures
       final Map<String, String> normalizedToRawName = {};
       final Map<String, String> normalizedToMeasure = {};
@@ -341,24 +386,25 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       for (int i = 1; i <= 20; i++) {
         final ingredientName = meal['strIngredient$i'] as String?;
         final measure = meal['strMeasure$i'] as String?;
-        
+
         if (ingredientName != null && ingredientName.trim().isNotEmpty) {
           final rawName = ingredientName.trim();
           final key = rawName.toLowerCase();
-          
+
           if (!normalizedToRawName.containsKey(key)) {
             // Capitalize first letter for a cleaner look
-            final formattedName = rawName.length > 1 
-                ? rawName[0].toUpperCase() + rawName.substring(1).toLowerCase() 
+            final formattedName = rawName.length > 1
+                ? rawName[0].toUpperCase() + rawName.substring(1).toLowerCase()
                 : rawName.toUpperCase();
             normalizedToRawName[key] = formattedName;
           }
-          
+
           final existingMeasure = normalizedToMeasure[key] ?? '';
           final newMeasure = measure?.trim() ?? '';
-          
+
           if (newMeasure.isNotEmpty) {
-            if (existingMeasure.isNotEmpty && !existingMeasure.contains(newMeasure)) {
+            if (existingMeasure.isNotEmpty &&
+                !existingMeasure.contains(newMeasure)) {
               normalizedToMeasure[key] = '$existingMeasure + $newMeasure';
             } else if (existingMeasure.isEmpty) {
               normalizedToMeasure[key] = newMeasure;
@@ -366,73 +412,71 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           }
         }
       }
-      
-      // Parallelize ingredient loading for better performance
-      final List<Future<void>> ingredientTasks = [];
-      
+
+      // Process ingredients sequentially to avoid rate limiting
       for (final key in normalizedToRawName.keys) {
         final nameToUse = normalizedToRawName[key]!;
         final finalMeasure = normalizedToMeasure[key] ?? '';
-        
-        ingredientTasks.add(() async {
-          try {
-             // Smart match for predefined formats like "Butter (Makhan | মাখন)"
-             String? matchedId;
-             final searchLower = nameToUse.toLowerCase();
-             
-             for (final ing in allIngredients) {
-               final ingNameLower = ing.name.toLowerCase();
-               if (ingNameLower == searchLower || 
-                   ingNameLower.startsWith('$searchLower (') || 
-                   ingNameLower.startsWith('$searchLower ')) {
-                 matchedId = ing.id;
-                 break;
-               }
-             }
-             
-             // Get or create the ingredient
-             final id = matchedId ?? await ingredientService.getOrCreateIngredient(nameToUse, 'Imported')
-                 .timeout(const Duration(seconds: 10));
-             
-             if (mounted) {
-                setState(() {
-                  final parsedQty = _parseMeasure(finalMeasure);
-                  
-                  if (!_selectedIngredientIds.contains(id)) {
-                    _selectedIngredientIds.add(id);
-                    _quantityAmountControllers[id] = TextEditingController(text: parsedQty.amount > 0 ? parsedQty.amount.toString() : '');
-                    _quantityUnits[id] = parsedQty.unit;
-                  } else {
-                    final currentAmountText = _quantityAmountControllers[id]?.text ?? '';
-                    if (currentAmountText.isEmpty && parsedQty.amount > 0) {
-                      _quantityAmountControllers[id]?.text = parsedQty.amount.toString();
-                    } else if (parsedQty.amount > 0) {
-                      final currentAmount = double.tryParse(currentAmountText) ?? 0;
-                      _quantityAmountControllers[id]?.text = (currentAmount + parsedQty.amount).toString();
-                    }
-                    
-                    final currentUnit = _quantityUnits[id] ?? '';
-                    if (currentUnit.isEmpty || currentUnit == 'pcs') {
-                      _quantityUnits[id] = parsedQty.unit;
-                    } else if (parsedQty.unit.isNotEmpty && parsedQty.unit != 'pcs' && !currentUnit.contains(parsedQty.unit)) {
-                      _quantityUnits[id] = '$currentUnit + ${parsedQty.unit}';
-                    }
-                  }
-                });
-             }
-          } catch (e) {
-             debugPrint('Error importing ingredient $nameToUse: $e');
+
+        try {
+          // Smart match for predefined formats like "Butter (Makhan | মাখন)"
+          String? matchedId;
+          final searchLower = nameToUse.toLowerCase();
+
+          for (final ing in allIngredients) {
+            final ingNameLower = ing.name.toLowerCase();
+            if (ingNameLower == searchLower ||
+                ingNameLower.startsWith('$searchLower (') ||
+                ingNameLower.startsWith('$searchLower ')) {
+              matchedId = ing.id;
+              break;
+            }
           }
-        }());
+
+          // Get or create the ingredient
+          final id =
+              matchedId ??
+              await ingredientService
+                  .getOrCreateIngredient(nameToUse, 'Imported')
+                  .timeout(const Duration(seconds: 10));
+
+          if (mounted) {
+            setState(() {
+              final parsedQty = _parseMeasure(finalMeasure);
+
+              if (!_selectedIngredientIds.contains(id)) {
+                _selectedIngredientIds.add(id);
+                _quantityAmountControllers[id] = TextEditingController(
+                  text: parsedQty.amount > 0 ? parsedQty.amount.toString() : '',
+                );
+                _quantityUnits[id] = parsedQty.unit;
+              } else {
+                final currentAmountText =
+                    _quantityAmountControllers[id]?.text ?? '';
+                if (currentAmountText.isEmpty && parsedQty.amount > 0) {
+                  _quantityAmountControllers[id]?.text = parsedQty.amount
+                      .toString();
+                } else if (parsedQty.amount > 0) {
+                  final currentAmount = double.tryParse(currentAmountText) ?? 0;
+                  _quantityAmountControllers[id]?.text =
+                      (currentAmount + parsedQty.amount).toString();
+                }
+
+                final currentUnit = _quantityUnits[id] ?? '';
+                if (currentUnit.isEmpty || currentUnit == 'pcs') {
+                  _quantityUnits[id] = parsedQty.unit;
+                } else if (parsedQty.unit.isNotEmpty &&
+                    parsedQty.unit != 'pcs' &&
+                    !currentUnit.contains(parsedQty.unit)) {
+                  _quantityUnits[id] = '$currentUnit + ${parsedQty.unit}';
+                }
+              }
+            });
+          }
+        } catch (e) {
+          debugPrint('Error importing ingredient $nameToUse: $e');
+        }
       }
-      
-      await Future.wait(ingredientTasks).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          debugPrint('Ingredient import timed out');
-          return <void>[];
-        },
-      );
     } finally {
       if (mounted) {
         setState(() {
@@ -471,7 +515,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           final urlFallback = Uri.parse(
             'https://www.themealdb.com/api/json/v1/1/search.php?s=${Uri.encodeComponent(firstWord)}',
           );
-          final responseFallback = await http.get(urlFallback).timeout(const Duration(seconds: 15));
+          final responseFallback = await http
+              .get(urlFallback)
+              .timeout(const Duration(seconds: 15));
           if (responseFallback.statusCode == 200) {
             final dataFallback = json.decode(responseFallback.body);
             final mealsFallback = dataFallback['meals'] as List?;
@@ -482,7 +528,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             }
           }
         }
-        
+
         // Ensure UI updates reliably
         _searchResultsNotifier.value = results;
       }
@@ -496,7 +542,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
   void _showRecipeSearchPopup({bool imageOnly = false}) {
     _imageSearchController.text = _nameController.text;
-    
+
     // Clear state or initiate search initially
     if (_imageSearchController.text.isNotEmpty) {
       _searchRecipes(_imageSearchController.text);
@@ -510,15 +556,22 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: AnimatedBuilder(
-          animation: Listenable.merge([_isSearchingNotifier, _searchResultsNotifier]),
+          animation: Listenable.merge([
+            _isSearchingNotifier,
+            _searchResultsNotifier,
+          ]),
           builder: (context, _) {
             final isSearching = _isSearchingNotifier.value;
             final searchResults = _searchResultsNotifier.value;
-            
+
             return Container(
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
               decoration: const BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
@@ -528,202 +581,215 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      imageOnly ? 'Find Recipe Image' : 'Find Recipes from MealDB',
-                      style: AppTextStyles.h2.copyWith(
-                        color: AppColors.primary,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        imageOnly ? 'Find Recipe Image' : 'Find Recipes',
+                        style: AppTextStyles.h2.copyWith(
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.surfaceContainerHigh,
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.surfaceContainerHigh,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(9999),
-                    border: Border.all(
-                      color: AppColors.outlineVariant.withAlpha(40),
-                    ),
+                    ],
                   ),
-                  child: TextField(
-                    controller: _imageSearchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search for recipes on MealDB...',
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: AppColors.primary,
+                  const SizedBox(height: 24),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(9999),
+                      border: Border.all(
+                        color: AppColors.outlineVariant.withAlpha(40),
                       ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 15,
-                      ),
-                      suffixIcon: isSearching
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            )
-                          : IconButton(
-                              icon: const Icon(Icons.send),
-                              onPressed: () {
-                                _searchRecipes(_imageSearchController.text);
-                              },
-                            ),
                     ),
-                    onSubmitted: (value) {
-                      _searchRecipes(value);
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-                Flexible(
-                  child: isSearching
-                      ? const Center(child: CircularProgressIndicator())
-                      : searchResults.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.image_search,
-                                size: 48,
-                                color: AppColors.onSurfaceVariant,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Type something above to search',
-                                style: AppTextStyles.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.separated(
-                          itemCount: searchResults.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final meal = searchResults[index];
-                            return GestureDetector(
-                              onTap: () {
-                                _importRecipe(meal, imageOnly: imageOnly);
-                                Navigator.pop(context);
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceContainerLowest,
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(
-                                    color:
-                                        AppColors.outlineVariant.withAlpha(20),
+                    child: TextField(
+                      controller: _imageSearchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search for recipes on MealDB...',
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: AppColors.primary,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 15,
+                        ),
+                        suffixIcon: isSearching
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withAlpha(5),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
                                 ),
-                                clipBehavior: Clip.antiAlias,
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 100,
-                                      height: 100,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.surfaceContainerLow,
-                                      ),
-                                      child: RecipeImage(
-                                        imageUrl: meal['strMealThumb'] ?? '',
-                                        fit: BoxFit.cover,
-                                        iconSize: 32,
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.send),
+                                onPressed: () {
+                                  _searchRecipes(_imageSearchController.text);
+                                },
+                              ),
+                      ),
+                      onSubmitted: (value) {
+                        _searchRecipes(value);
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                  Flexible(
+                    child: isSearching
+                        ? const Center(child: CircularProgressIndicator())
+                        : searchResults.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.image_search,
+                                  size: 48,
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Type something above to search',
+                                  style: AppTextStyles.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: searchResults.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final meal = searchResults[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  _importRecipe(meal, imageOnly: imageOnly);
+                                  Navigator.pop(context);
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceContainerLowest,
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: AppColors.outlineVariant.withAlpha(
+                                        20,
                                       ),
                                     ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              (meal['strCategory'] ?? '')
-                                                  .toString()
-                                                  .toUpperCase(),
-                                              style: AppTextStyles.labelSmall
-                                                  .copyWith(
-                                                color: AppColors.secondary,
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: 1.0,
-                                                fontSize: 10,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              meal['strMeal'] ??
-                                                  'Unknown Recipe',
-                                              style: AppTextStyles.labelLarge
-                                                  .copyWith(
-                                                color: AppColors.onBackground,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  imageOnly ? 'Select Image' : 'Import Now',
-                                                  style: AppTextStyles
-                                                      .labelSmall
-                                                      .copyWith(
-                                                    color: AppColors.primary,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Icon(
-                                                  imageOnly ? Icons.add_a_photo_rounded : Icons.download_rounded,
-                                                  size: 14,
-                                                  color: AppColors.primary,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(5),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 100,
+                                        height: 100,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.surfaceContainerLow,
+                                        ),
+                                        child: RecipeImage(
+                                          imageUrl: meal['strMealThumb'] ?? '',
+                                          fit: BoxFit.cover,
+                                          iconSize: 32,
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                (meal['strCategory'] ?? '')
+                                                    .toString()
+                                                    .toUpperCase(),
+                                                style: AppTextStyles.labelSmall
+                                                    .copyWith(
+                                                      color:
+                                                          AppColors.secondary,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      letterSpacing: 1.0,
+                                                      fontSize: 10,
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                meal['strMeal'] ??
+                                                    'Unknown Recipe',
+                                                style: AppTextStyles.labelLarge
+                                                    .copyWith(
+                                                      color: AppColors
+                                                          .onBackground,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    imageOnly
+                                                        ? 'Select Image'
+                                                        : 'Import Now',
+                                                    style: AppTextStyles
+                                                        .labelSmall
+                                                        .copyWith(
+                                                          color:
+                                                              AppColors.primary,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Icon(
+                                                    imageOnly
+                                                        ? Icons
+                                                              .add_a_photo_rounded
+                                                        : Icons
+                                                              .download_rounded,
+                                                    size: 14,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -857,13 +923,17 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       _buildSmallImageAction(
-                                        onPressed: () => _showRecipeSearchPopup(imageOnly: true),
+                                        onPressed: () => _showRecipeSearchPopup(
+                                          imageOnly: true,
+                                        ),
                                         icon: Icons.image_search,
                                         label: 'Search Image',
                                       ),
                                       const SizedBox(width: 8),
                                       _buildSmallImageAction(
-                                        onPressed: () => _showRecipeSearchPopup(imageOnly: false),
+                                        onPressed: () => _showRecipeSearchPopup(
+                                          imageOnly: false,
+                                        ),
                                         icon: Icons.language,
                                         label: 'Full Import',
                                         isPrimary: true,
@@ -1189,15 +1259,17 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               child: TextFormField(
                 controller: controller,
                 keyboardType: TextInputType.number,
-                validator: isMandatory ? (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Required';
-                  }
-                  if (int.tryParse(value.trim()) == null) {
-                    return 'Invalid';
-                  }
-                  return null;
-                } : null,
+                validator: isMandatory
+                    ? (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Required';
+                        }
+                        if (int.tryParse(value.trim()) == null) {
+                          return 'Invalid';
+                        }
+                        return null;
+                      }
+                    : null,
                 style: AppTextStyles.h3.copyWith(height: 1.1),
                 decoration: InputDecoration(
                   hintText: hint,
@@ -1206,7 +1278,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                     color: AppColors.onSurfaceVariant.withAlpha(50),
                   ),
                   isDense: true,
-                  errorStyle: AppTextStyles.labelSmall.copyWith(color: AppColors.error),
+                  errorStyle: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.error,
+                  ),
                 ),
               ),
             ),
@@ -1254,7 +1328,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             flex: 2,
             child: TextFormField(
               controller: _quantityAmountControllers[ingredient.id],
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 hintText: 'e.g., 4',
                 border: InputBorder.none,
@@ -1269,10 +1345,13 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           Expanded(
             flex: 2,
             child: DropdownButtonFormField<String>(
-              initialValue: UnitConstants.units.contains(_quantityUnits[ingredient.id]) 
-                  ? _quantityUnits[ingredient.id] 
+              initialValue:
+                  UnitConstants.units.contains(_quantityUnits[ingredient.id])
+                  ? _quantityUnits[ingredient.id]
                   : null,
-              items: UnitConstants.units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+              items: UnitConstants.units
+                  .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                  .toList(),
               onChanged: (val) {
                 if (val != null) {
                   setState(() {
@@ -1463,6 +1542,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       ),
     );
   }
+
   Widget _buildSmallImageAction({
     required VoidCallback onPressed,
     required IconData icon,
@@ -1471,30 +1551,40 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   }) {
     return Container(
       constraints: const BoxConstraints(minWidth: 90),
-      child: isPrimary 
-        ? ElevatedButton.icon(
-            onPressed: onPressed,
-            icon: Icon(icon, size: 16),
-            label: Text(label, style: const TextStyle(fontSize: 11)),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
+      child: isPrimary
+          ? ElevatedButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 16),
+              label: Text(label, style: const TextStyle(fontSize: 11)),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+            )
+          : OutlinedButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 16),
+              label: Text(label, style: const TextStyle(fontSize: 11)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                side: BorderSide(color: AppColors.primary.withAlpha(100)),
+                foregroundColor: AppColors.primary,
+              ),
             ),
-          )
-        : OutlinedButton.icon(
-            onPressed: onPressed,
-            icon: Icon(icon, size: 16),
-            label: Text(label, style: const TextStyle(fontSize: 11)),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              side: BorderSide(color: AppColors.primary.withAlpha(100)),
-              foregroundColor: AppColors.primary,
-            ),
-          ),
     );
   }
 }
