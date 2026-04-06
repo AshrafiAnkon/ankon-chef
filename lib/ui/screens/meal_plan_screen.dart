@@ -949,7 +949,7 @@ class _DashedRRectPainter extends CustomPainter {
   }
 }
 
-class _PlannedMealCard extends StatelessWidget {
+class _PlannedMealCard extends StatefulWidget {
   const _PlannedMealCard({
     required this.mealPlan,
     required this.recipe,
@@ -967,8 +967,17 @@ class _PlannedMealCard extends StatelessWidget {
   final int missingCount;
   final bool inStock;
   final VoidCallback? onRemove;
-  final VoidCallback onStartCooking;
+  final VoidCallback onStartCooking; // Navigates to recipe details
   final VoidCallback onAddMissing;
+
+  @override
+  State<_PlannedMealCard> createState() => _PlannedMealCardState();
+}
+
+class _PlannedMealCardState extends State<_PlannedMealCard> {
+  bool _isCooking = false;
+  bool _isCooked = false;
+  DateTime? _cookingStartTime;
 
   @override
   Widget build(BuildContext context) {
@@ -977,157 +986,178 @@ class _PlannedMealCard extends StatelessWidget {
     final redBg = AppColors.error.withAlpha(28);
     final redBorder = AppColors.error.withAlpha(100);
 
-    final bg = inStock ? greenBg : redBg;
-    final borderColor = inStock ? greenBorder : redBorder;
-    final statusLabel = inStock ? 'In Stock' : '$missingCount Missing';
-    final statusColor = inStock ? AppColors.secondary : AppColors.error;
+    final bg = _isCooked ? AppColors.surfaceContainerHigh : (widget.inStock ? greenBg : redBg);
+    final borderColor = _isCooked ? AppColors.outlineVariant : (widget.inStock ? greenBorder : redBorder);
+    final statusLabel = _isCooked ? 'Cooked' : (widget.inStock ? 'In Stock' : '${widget.missingCount} Missing');
+    final statusColor = _isCooked ? AppColors.onSurfaceVariant : (widget.inStock ? AppColors.secondary : AppColors.error);
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(6),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RecipeImage(
-                imageUrl: recipe.imageUrl,
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
-                iconSize: 30,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withAlpha(40),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            statusLabel,
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: statusColor,
-                              fontWeight: FontWeight.w800,
+    return GestureDetector(
+      onTap: widget.onStartCooking, // Entire card tap navigates to details
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(6),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RecipeImage(
+                  imageUrl: widget.recipe.imageUrl,
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.cover,
+                  iconSize: 30,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (onRemove != null)
-                          GestureDetector(
-                            onTap: onRemove,
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: const BoxDecoration(
-                                color: AppColors.surfaceContainerHigh,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                size: 14,
-                                color: AppColors.onSurfaceVariant,
+                            decoration: BoxDecoration(
+                              color: statusColor.withAlpha(40),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              statusLabel,
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: statusColor,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      recipe.name,
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: AppColors.onBackground,
-                        fontWeight: FontWeight.w800,
+                          const Spacer(),
+                          if (widget.onRemove != null)
+                            GestureDetector(
+                              onTap: widget.onRemove,
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.surfaceContainerHigh,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 14,
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${planned.servingTime} · ${planned.servings} servings',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              if (inStock)
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onStartCooking,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.secondary,
-                      foregroundColor: AppColors.onSecondary,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'Start Cooking',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      onAddMissing();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Added missing ingredients for ${recipe.name} to shopping list',
-                          ),
-                          behavior: SnackBarBehavior.floating,
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.recipe.name,
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: AppColors.onBackground,
+                          fontWeight: FontWeight.w800,
                         ),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    icon: const Icon(Icons.add_shopping_cart, size: 18),
-                    label: const Text(
-                      'Add Missing to List',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${widget.planned.servingTime} · ${widget.planned.servings} servings',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (widget.inStock)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isCooked
+                          ? null
+                          : () {
+                              if (!_isCooking) {
+                                setState(() {
+                                  _isCooking = true;
+                                  _cookingStartTime = DateTime.now();
+                                });
+                                debugPrint('Started cooking at $_cookingStartTime');
+                              } else {
+                                final end = DateTime.now();
+                                final duration = end.difference(_cookingStartTime!);
+                                debugPrint('Finished cooking at $end. Interval: ${duration.inMinutes} minutes');
+                                setState(() {
+                                  _isCooking = false;
+                                  _isCooked = true;
+                                });
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isCooked ? AppColors.surfaceContainerHigh : AppColors.secondary,
+                        foregroundColor: _isCooked ? AppColors.onSurfaceVariant : AppColors.onSecondary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        _isCooked ? 'Cooked' : (_isCooking ? 'Finish cooking' : 'Start Cooking'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        widget.onAddMissing();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Added missing ingredients for ${widget.recipe.name} to shopping list',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add_shopping_cart, size: 18),
+                      label: const Text(
+                        'Add Missing to List',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1612,6 +1642,7 @@ class _SelectRecipesBottomSheetState
                     ReorderableListView(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
                       onReorder: (oldIndex, newIndex) {
                         setState(() {
                           if (newIndex > oldIndex) newIndex--;
@@ -1626,6 +1657,7 @@ class _SelectRecipesBottomSheetState
                               '${_pendingMeals[i].recipeId}_${i}_${_pendingMeals[i].mealPeriod}',
                             ),
                             planned: _pendingMeals[i],
+                            index: i,
                             recipesAsync: recipesAsync,
                             onDelete: () {
                               setState(() => _pendingMeals.removeAt(i));
@@ -1916,11 +1948,13 @@ class _PendingMealRow extends ConsumerWidget {
   const _PendingMealRow({
     super.key,
     required this.planned,
+    required this.index,
     required this.recipesAsync,
     required this.onDelete,
   });
 
   final PlannedMeal planned;
+  final int index;
   final AsyncValue<List<Recipe>> recipesAsync;
   final VoidCallback onDelete;
 
@@ -1941,8 +1975,13 @@ class _PendingMealRow extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.drag_handle, color: AppColors.outline),
-              const SizedBox(width: 4),
+              ReorderableDragStartListener(
+                index: index,
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 4, top: 8, bottom: 8, left: 4),
+                  child: Icon(Icons.drag_handle, color: AppColors.outline),
+                ),
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

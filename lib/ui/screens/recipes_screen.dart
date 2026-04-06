@@ -72,14 +72,106 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     children: [
-                      _HeroRecipeCard(recipe: filteredRecipes.first),
+                      Dismissible(
+                        key: ValueKey(filteredRecipes.first.id),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 24),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                        confirmDismiss: (direction) async {
+                          return await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Recipe'),
+                              content: Text('Are you sure you want to delete "${filteredRecipes.first.name}"?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppColors.error,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        onDismissed: (direction) {
+                          ref.read(recipeServiceProvider).deleteRecipe(filteredRecipes.first.id);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Recipe deleted')),
+                                  );
+                        },
+                        child: _HeroRecipeCard(recipe: filteredRecipes.first),
+                      ),
                       const SizedBox(height: 16),
                       ...filteredRecipes
                           .skip(1)
                           .map(
                             (r) => Padding(
                               padding: const EdgeInsets.only(bottom: 16),
-                              child: _StandardRecipeCard(recipe: r),
+                              child: Dismissible(
+                                key: ValueKey(r.id),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 24),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                ),
+                                confirmDismiss: (direction) async {
+                                  return await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Delete Recipe'),
+                                      content: Text('Are you sure you want to delete "${r.name}"?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () => Navigator.of(context).pop(true),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: AppColors.error,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: const Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                onDismissed: (direction) {
+                                  ref.read(recipeServiceProvider).deleteRecipe(r.id);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Recipe deleted')),
+                                  );
+                                },
+                                child: _StandardRecipeCard(recipe: r),
+                              ),
                             ),
                           ),
                     ],

@@ -8,6 +8,7 @@ class UserModel extends Equatable {
   final String displayName;
   final String? photoUrl;
   final DateTime createdAt;
+  final int cookingStreak;
 
   const UserModel({
     required this.uid,
@@ -15,6 +16,7 @@ class UserModel extends Equatable {
     required this.displayName,
     this.photoUrl,
     required this.createdAt,
+    this.cookingStreak = 0,
   });
 
   /// Create UserModel from Firebase User and Firestore data
@@ -26,6 +28,7 @@ class UserModel extends Equatable {
       displayName: data['displayName'] as String,
       photoUrl: data['photoUrl'] as String?,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      cookingStreak: data['cookingStreak'] as int? ?? 0,
     );
   }
 
@@ -36,6 +39,7 @@ class UserModel extends Equatable {
       'displayName': displayName,
       'photoUrl': photoUrl,
       'createdAt': Timestamp.fromDate(createdAt),
+      'cookingStreak': cookingStreak,
     };
   }
 
@@ -46,6 +50,7 @@ class UserModel extends Equatable {
     String? displayName,
     String? photoUrl,
     DateTime? createdAt,
+    int? cookingStreak,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -53,9 +58,10 @@ class UserModel extends Equatable {
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
+      cookingStreak: cookingStreak ?? this.cookingStreak,
     );
   }
 
   @override
-  List<Object?> get props => [uid, email, displayName, photoUrl, createdAt];
+  List<Object?> get props => [uid, email, displayName, photoUrl, createdAt, cookingStreak];
 }
