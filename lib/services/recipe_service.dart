@@ -124,7 +124,9 @@ class RecipeService {
     if (cookTime != null) updates['cookTime'] = cookTime;
     if (calories != null) updates['calories'] = calories;
     if (ingredientQuantities != null) {
-      updates['ingredientQuantities'] = ingredientQuantities;
+      updates['ingredientQuantities'] = ingredientQuantities.map(
+        (key, value) => MapEntry(key, value.toMap()),
+      );
     }
     updates['youtubeUrl'] = youtubeUrl;
     updates['imageUrl'] = finalImageUrl;

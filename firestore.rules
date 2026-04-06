@@ -32,7 +32,7 @@ service cloud.firestore {
 
     // User-specific ingredients status
     match /userIngredients/{docId} {
-      allow read, write: if request.auth != null && (docId.startsWith(request.auth.uid + "_") || isAdmin());
+      allow read, write: if request.auth != null && (docId.matches("^" + request.auth.uid + "_.*") || isAdmin());
     }
 
     // User-specific meal plans

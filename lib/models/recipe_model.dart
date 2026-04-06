@@ -18,6 +18,26 @@ class RecipeQuantity extends Equatable {
     );
   }
 
+  /// Parse from a legacy string format like "2 cups" or "1.5 kg"
+  factory RecipeQuantity.fromString(String value) {
+    if (value.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pieces');
+    final parts = value.trim().split(' ');
+    if (parts.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pieces');
+    
+    final parsedAmount = double.tryParse(parts.first);
+    if (parsedAmount != null) {
+      if (parts.length > 1) {
+        return RecipeQuantity(
+          amount: parsedAmount,
+          unit: parts.sublist(1).join(' ').trim(),
+        );
+      }
+      return RecipeQuantity(amount: parsedAmount, unit: 'pieces');
+    }
+    
+    return RecipeQuantity(amount: 0, unit: value);
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'amount': amount,
@@ -79,18 +99,32 @@ class Recipe extends Equatable {
       cookTime: data['cookTime'] as int?,
       calories: data['calories'] as int?,
       ingredientQuantities: data['ingredientQuantities'] != null 
-          ? (data['ingredientQuantities'] as Map<String, dynamic>).map(
-              (key, value) => MapEntry(
-                key,
-                RecipeQuantity.fromMap(value as Map<String, dynamic>),
-              ),
-            )
+          ? _parseIngredientQuantities(data['ingredientQuantities'])
           : null,
       youtubeUrl: data['youtubeUrl'] as String?,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
       isFavorite: data['isFavorite'] as bool? ?? false,
     );
+  }
+
+  /// Parses ingredientQuantities from Firestore data, handling both
+  /// legacy string format (e.g. {"flour": "2 cups"}) and new map format
+  /// (e.g. {"flour": {"amount": 2, "unit": "cups"}}).
+  static Map<String, RecipeQuantity> _parseIngredientQuantities(dynamic raw) {
+    final map = Map<String, dynamic>.from(raw as Map);
+    return map.map((key, value) {
+      if (value is Map) {
+        // New format: {amount: ..., unit: ...}
+        return MapEntry(key, RecipeQuantity.fromMap(Map<String, dynamic>.from(value)));
+      } else if (value is String) {
+        // Legacy format: "2 cups"
+        return MapEntry(key, RecipeQuantity.fromString(value));
+      } else {
+        // Fallback for unexpected types
+        return MapEntry(key, const RecipeQuantity(amount: 0, unit: 'pieces'));
+      }
+    });
   }
 
   Map<String, dynamic> toFirestore() {
