@@ -103,9 +103,8 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pantryIngredientsAsync = ref.watch(pantryIngredientsProvider);
-    final activeFilters = ref.watch(activeFilterOptionsProvider);
-    final filteredAsync = ref.watch(filteredRecipesProvider(activeFilters));
+    final recipeIngredientsAsync = ref.watch(allRecipeIngredientsProvider);
+    final filteredAsync = ref.watch(filteredRecipesProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -124,7 +123,7 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
               const SizedBox(height: 24),
               _buildPantryMatchSection(),
               const SizedBox(height: 32),
-              _buildIngredientsSection(pantryIngredientsAsync),
+              _buildIngredientsSection(recipeIngredientsAsync),
               const SizedBox(height: 32),
               _buildFilterByTagsSection(),
               const SizedBox(height: 32),
@@ -244,7 +243,7 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
     );
   }
 
-  Widget _buildIngredientsSection(AsyncValue<List<Ingredient>> pantryIngredientsAsync) {
+  Widget _buildIngredientsSection(AsyncValue<List<Ingredient>> recipeIngredientsAsync) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -290,14 +289,14 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
                       ),
                       const SizedBox(height: 24),
                       // Selected Chips
-                      pantryIngredientsAsync.when(
-                        data: (pantryIngredients) {
+                      recipeIngredientsAsync.when(
+                        data: (recipeIngredients) {
                           return Wrap(
                             spacing: 12,
                             runSpacing: 12,
                             children: [
                               ..._selectedIngredientIds.map((id) {
-                                final ingredient = pantryIngredients.firstWhere(
+                                final ingredient = recipeIngredients.firstWhere(
                                   (ing) => ing.id == id,
                                   orElse: () => Ingredient(
                                     id: id,
@@ -307,7 +306,7 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
                                 );
                                 return _buildIngredientChip(ingredient.name, id);
                               }),
-                              _buildAddMoreButton(pantryIngredients),
+                              _buildAddMoreButton(recipeIngredients),
                             ],
                           );
                         },

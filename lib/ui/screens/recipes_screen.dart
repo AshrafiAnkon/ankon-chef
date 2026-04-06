@@ -32,9 +32,8 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeFilters = ref.watch(activeFilterOptionsProvider);
     final recipesAsync = _searchQuery.isEmpty
-        ? ref.watch(filteredRecipesProvider(activeFilters))
+        ? ref.watch(filteredRecipesProvider)
         : ref.watch(searchRecipesProvider(_searchQuery));
 
     final pantryItemsAsync = ref.watch(pantryItemsProvider);

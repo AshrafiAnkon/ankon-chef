@@ -8,90 +8,6 @@ part of 'filter_recipe_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Filtered recipes based on filter options
-
-@ProviderFor(filteredRecipes)
-final filteredRecipesProvider = FilteredRecipesFamily._();
-
-/// Filtered recipes based on filter options
-
-final class FilteredRecipesProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<Recipe>>,
-          List<Recipe>,
-          FutureOr<List<Recipe>>
-        >
-    with $FutureModifier<List<Recipe>>, $FutureProvider<List<Recipe>> {
-  /// Filtered recipes based on filter options
-  FilteredRecipesProvider._({
-    required FilteredRecipesFamily super.from,
-    required FilterOptions super.argument,
-  }) : super(
-         retry: null,
-         name: r'filteredRecipesProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$filteredRecipesHash();
-
-  @override
-  String toString() {
-    return r'filteredRecipesProvider'
-        ''
-        '($argument)';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<List<Recipe>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<List<Recipe>> create(Ref ref) {
-    final argument = this.argument as FilterOptions;
-    return filteredRecipes(ref, argument);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is FilteredRecipesProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$filteredRecipesHash() => r'9a707af73506a37b903d748a020f06605bab234e';
-
-/// Filtered recipes based on filter options
-
-final class FilteredRecipesFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<Recipe>>, FilterOptions> {
-  FilteredRecipesFamily._()
-    : super(
-        retry: null,
-        name: r'filteredRecipesProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  /// Filtered recipes based on filter options
-
-  FilteredRecipesProvider call(FilterOptions filterOptions) =>
-      FilteredRecipesProvider._(argument: filterOptions, from: this);
-
-  @override
-  String toString() => r'filteredRecipesProvider';
-}
-
 /// Active filter options state
 
 @ProviderFor(ActiveFilterOptions)
@@ -151,12 +67,65 @@ abstract class _$ActiveFilterOptions extends $Notifier<FilterOptions> {
   }
 }
 
-/// Get pantry ingredients (ingredient details from pantry items)
+/// Filtered recipes — watches activeFilterOptionsProvider directly so there is
+/// only ever ONE provider instance. This avoids the "subscription was closed"
+/// crash that occurs when a family provider is disposed mid-await while its
+/// async body is still running.
+
+@ProviderFor(filteredRecipes)
+final filteredRecipesProvider = FilteredRecipesProvider._();
+
+/// Filtered recipes — watches activeFilterOptionsProvider directly so there is
+/// only ever ONE provider instance. This avoids the "subscription was closed"
+/// crash that occurs when a family provider is disposed mid-await while its
+/// async body is still running.
+
+final class FilteredRecipesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<Recipe>>,
+          List<Recipe>,
+          Stream<List<Recipe>>
+        >
+    with $FutureModifier<List<Recipe>>, $StreamProvider<List<Recipe>> {
+  /// Filtered recipes — watches activeFilterOptionsProvider directly so there is
+  /// only ever ONE provider instance. This avoids the "subscription was closed"
+  /// crash that occurs when a family provider is disposed mid-await while its
+  /// async body is still running.
+  FilteredRecipesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'filteredRecipesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$filteredRecipesHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<List<Recipe>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<Recipe>> create(Ref ref) {
+    return filteredRecipes(ref);
+  }
+}
+
+String _$filteredRecipesHash() => r'9134de16628423fdf31af839d4df05fb54ef871f';
+
+/// Pantry ingredients (ingredients the user has in their pantry)
 
 @ProviderFor(pantryIngredients)
 final pantryIngredientsProvider = PantryIngredientsProvider._();
 
-/// Get pantry ingredients (ingredient details from pantry items)
+/// Pantry ingredients (ingredients the user has in their pantry)
 
 final class PantryIngredientsProvider
     extends
@@ -166,7 +135,7 @@ final class PantryIngredientsProvider
           FutureOr<List<Ingredient>>
         >
     with $FutureModifier<List<Ingredient>>, $FutureProvider<List<Ingredient>> {
-  /// Get pantry ingredients (ingredient details from pantry items)
+  /// Pantry ingredients (ingredients the user has in their pantry)
   PantryIngredientsProvider._()
     : super(
         from: null,
@@ -193,4 +162,49 @@ final class PantryIngredientsProvider
   }
 }
 
-String _$pantryIngredientsHash() => r'e287d32202e9faf0ee406f828aeb1e8a8b3f65d0';
+String _$pantryIngredientsHash() => r'dbd303895401255c46140370807d460a16253951';
+
+/// All ingredients used across all of the user's recipes
+
+@ProviderFor(allRecipeIngredients)
+final allRecipeIngredientsProvider = AllRecipeIngredientsProvider._();
+
+/// All ingredients used across all of the user's recipes
+
+final class AllRecipeIngredientsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<Ingredient>>,
+          List<Ingredient>,
+          FutureOr<List<Ingredient>>
+        >
+    with $FutureModifier<List<Ingredient>>, $FutureProvider<List<Ingredient>> {
+  /// All ingredients used across all of the user's recipes
+  AllRecipeIngredientsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'allRecipeIngredientsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$allRecipeIngredientsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<Ingredient>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<Ingredient>> create(Ref ref) {
+    return allRecipeIngredients(ref);
+  }
+}
+
+String _$allRecipeIngredientsHash() =>
+    r'f08432e46e141560124b7478f713a7e7d7e0b3d9';
