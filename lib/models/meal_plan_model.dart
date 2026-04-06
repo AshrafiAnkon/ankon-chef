@@ -21,12 +21,12 @@ class PlannedMeal extends Equatable {
 
   factory PlannedMeal.fromMap(Map<String, dynamic> data) {
     return PlannedMeal(
-      recipeId: data['recipeId'] as String,
-      mealPeriod: data['mealPeriod'] as String? ?? 'Dinner',
-      servingTime: data['servingTime'] as String? ?? '19:00',
-      servings: data['servings'] as int? ?? 2,
-      mealNotes: data['mealNotes'] as String? ?? '',
-      prepReminders: List<String>.from(data['prepReminders'] ?? []),
+      recipeId: data['recipeId']?.toString() ?? '',
+      mealPeriod: data['mealPeriod']?.toString() ?? 'Dinner',
+      servingTime: data['servingTime']?.toString() ?? '19:00',
+      servings: data['servings'] is num ? (data['servings'] as num).toInt() : 2,
+      mealNotes: data['mealNotes']?.toString() ?? '',
+      prepReminders: List<String>.from((data['prepReminders'] as List?) ?? []),
     );
   }
 
@@ -69,29 +69,29 @@ class MealPlan extends Equatable {
   });
 
   /// Computed property for backward compatibility
-  List<String> get recipeIds => plannedMeals.map((m) => m.recipeId).toList();
+  List<String> get recipeIds => plannedMeals.map<String>((m) => m.recipeId).toList();
 
   factory MealPlan.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     
     // Support backward compatibility where recipeIds was used
     List<PlannedMeal> meals = [];
-    if (data.containsKey('plannedMeals')) {
+    if (data['plannedMeals'] != null) {
       meals = (data['plannedMeals'] as List)
-          .map((m) => PlannedMeal.fromMap(m as Map<String, dynamic>))
+          .map((m) => PlannedMeal.fromMap(Map<String, dynamic>.from(m as Map<dynamic, dynamic>)))
           .toList();
-    } else if (data.containsKey('recipeIds')) {
+    } else if (data['recipeIds'] != null && data['recipeIds'] is List) {
       meals = (data['recipeIds'] as List)
-          .map((id) => PlannedMeal(recipeId: id as String))
+          .map((id) => PlannedMeal(recipeId: id?.toString() ?? ''))
           .toList();
     }
 
     return MealPlan(
       id: doc.id,
-      userId: data['userId'] as String,
-      planDate: (data['planDate'] as Timestamp).toDate(),
+      userId: data['userId']?.toString() ?? '',
+      planDate: data['planDate'] is Timestamp ? (data['planDate'] as Timestamp).toDate() : DateTime.now(),
       plannedMeals: meals,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] is Timestamp ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
     );
   }
 

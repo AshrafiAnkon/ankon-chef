@@ -153,7 +153,37 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       backgroundColor: AppColors.surface,
       appBar: _buildAppBar(),
       body: _buildBody(),
+      floatingActionButton: _buildFAB(),
       bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+
+  Widget _buildFAB() {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryContainer],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withAlpha(80),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: FloatingActionButton(
+        onPressed: () => _showSelectRecipesDialog(),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      ),
     );
   }
 
@@ -268,7 +298,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
-            onTap: () => _showSelectRecipesDialog(),
+            onTap: () => context.push('/shopping-list'),
             child: const SizedBox(
               width: 56,
               height: 56,

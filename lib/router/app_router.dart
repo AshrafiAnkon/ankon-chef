@@ -10,6 +10,7 @@ import '../ui/screens/ingredients_screen.dart';
 import '../ui/screens/pantry_screen.dart';
 import '../ui/screens/meal_plan_screen.dart';
 import '../ui/screens/filter_recipes_screen.dart';
+import '../ui/screens/shopping_list_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -91,6 +92,11 @@ GoRouter router(Ref ref) {
         path: '/filter-recipes',
         name: 'filter-recipes',
         builder: (context, state) => const FilterRecipesScreen(),
+      ),
+      GoRoute(
+        path: '/shopping-list',
+        name: 'shopping-list',
+        builder: (context, state) => const ShoppingListScreen(),
       ),
     ],
   );
