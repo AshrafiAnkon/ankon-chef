@@ -15,6 +15,7 @@ import '../../models/ingredient_model.dart';
 import '../../models/recipe_model.dart';
 import '../widgets/ingredient_multi_select.dart';
 import '../widgets/recipe_image.dart';
+import '../../models/unit_constants.dart';
 
 class CreateRecipeScreen extends ConsumerStatefulWidget {
   final String? editRecipeId;
@@ -173,7 +174,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       for (var id in _selectedIngredientIds) {
         ingredientQuantities[id] = RecipeQuantity(
           amount: double.tryParse(_quantityAmountControllers[id]?.text ?? '') ?? 0.0,
-          unit: _quantityUnits[id] ?? 'pieces',
+          unit: _quantityUnits[id] ?? 'pcs',
         );
       }
 
@@ -262,9 +263,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
   // Helper to parse string to RecipeQuantity
   RecipeQuantity _parseMeasure(String measure) {
-    if (measure.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pieces');
+    if (measure.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pcs');
     final parts = measure.trim().split(' ');
-    if (parts.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pieces');
+    if (parts.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pcs');
     
     final parsedAmount = double.tryParse(parts.first);
     if (parsedAmount != null) {
@@ -274,7 +275,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           unit: parts.sublist(1).join(' ').trim(),
         );
       }
-      return RecipeQuantity(amount: parsedAmount, unit: 'pieces');
+      return RecipeQuantity(amount: parsedAmount, unit: 'pcs');
     }
     
     return RecipeQuantity(amount: 0, unit: measure);
@@ -411,9 +412,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                     }
                     
                     final currentUnit = _quantityUnits[id] ?? '';
-                    if (currentUnit.isEmpty || currentUnit == 'pieces') {
+                    if (currentUnit.isEmpty || currentUnit == 'pcs') {
                       _quantityUnits[id] = parsedQty.unit;
-                    } else if (parsedQty.unit.isNotEmpty && parsedQty.unit != 'pieces' && !currentUnit.contains(parsedQty.unit)) {
+                    } else if (parsedQty.unit.isNotEmpty && parsedQty.unit != 'pcs' && !currentUnit.contains(parsedQty.unit)) {
                       _quantityUnits[id] = '$currentUnit + ${parsedQty.unit}';
                     }
                   }
@@ -1230,7 +1231,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       _quantityAmountControllers[ingredient.id] = TextEditingController();
     }
     if (!_quantityUnits.containsKey(ingredient.id)) {
-      _quantityUnits[ingredient.id] = 'pieces'; // default unit
+      _quantityUnits[ingredient.id] = 'pcs'; // default unit
     }
 
     return Container(
@@ -1267,16 +1268,26 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           const SizedBox(width: 8),
           Expanded(
             flex: 2,
-            child: TextFormField(
-              initialValue: _quantityUnits[ingredient.id],
-              onChanged: (val) => _quantityUnits[ingredient.id] = val,
+            child: DropdownButtonFormField<String>(
+              initialValue: UnitConstants.units.contains(_quantityUnits[ingredient.id]) 
+                  ? _quantityUnits[ingredient.id] 
+                  : null,
+              items: UnitConstants.units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    _quantityUnits[ingredient.id] = val;
+                  });
+                }
+              },
               decoration: const InputDecoration(
-                hintText: 'e.g., cups',
+                hintText: 'Unit',
                 border: InputBorder.none,
                 isDense: true,
               ),
               style: AppTextStyles.bodyMedium.copyWith(
                 fontWeight: FontWeight.w600,
+                color: AppColors.onBackground,
               ),
             ),
           ),

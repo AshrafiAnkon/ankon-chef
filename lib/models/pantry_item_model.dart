@@ -7,7 +7,7 @@ class PantryItem extends Equatable {
   final String userId;
   final String ingredientId;
   final double amount;
-  final String unit; // e.g., "kg", "g", "L", "pieces"
+  final String unit; // e.g., "kg", "g", "L", "pcs"
   final DateTime addedDate;
   final DateTime? expiryDate;
 

@@ -87,11 +87,24 @@ class MealPlanService {
     });
   }
 
+  /// Update shopping list override
+  Future<void> updateShoppingListOverride(String mealPlanId, String ingredientId, double amount, String unit) async {
+    await _firestore.collection('mealPlans').doc(mealPlanId).set({
+      'shoppingListOverrides': {
+        ingredientId: {
+          'amount': amount,
+          'unit': unit,
+        }
+      }
+    }, SetOptions(merge: true));
+  }
+
   /// Generate grocery list for meal plan
   Future<List<GroceryItem>> generateGroceryList({
     required List<String> recipeIds,
     required List<String> currentIngredientIds,
     List<String> shoppingListExclusions = const [],
+    Map<String, ShoppingListOverride> shoppingListOverrides = const {},
   }) async {
     // Get all recipes in the meal plan
     final recipeDocs = await Future.wait(
@@ -139,13 +152,22 @@ class MealPlanService {
         if (shoppingListExclusions.contains(ingredient.id)) continue;
 
         final isAvailable = currentIngredientIds.contains(ingredient.id);
+        
+        double amount = totalQuantities[ingredient.id] ?? 0;
+        String unit = ingredientUnits[ingredient.id] ?? '';
+
+        // Apply overrides if any
+        if (shoppingListOverrides.containsKey(ingredient.id)) {
+          amount = shoppingListOverrides[ingredient.id]!.amount;
+          unit = shoppingListOverrides[ingredient.id]!.unit;
+        }
 
         groceryItems.add(
           GroceryItem(
             ingredientId: ingredient.id,
             ingredientName: ingredient.name,
-            amount: totalQuantities[ingredient.id] ?? 0,
-            unit: ingredientUnits[ingredient.id] ?? '',
+            amount: amount,
+            unit: unit,
             isAvailable: isAvailable,
           ),
         );

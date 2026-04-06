@@ -52,6 +52,34 @@ class PlannedMeal extends Equatable {
       ];
 }
 
+/// Represents an override for a shopping list item
+class ShoppingListOverride extends Equatable {
+  final double amount;
+  final String unit;
+
+  const ShoppingListOverride({
+    required this.amount,
+    required this.unit,
+  });
+
+  factory ShoppingListOverride.fromMap(Map<String, dynamic> data) {
+    return ShoppingListOverride(
+      amount: (data['amount'] as num).toDouble(),
+      unit: data['unit'] as String,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'amount': amount,
+      'unit': unit,
+    };
+  }
+
+  @override
+  List<Object?> get props => [amount, unit];
+}
+
 /// Meal plan model for planning meals and generating grocery lists
 class MealPlan extends Equatable {
   final String id;
@@ -59,6 +87,7 @@ class MealPlan extends Equatable {
   final DateTime planDate;
   final List<PlannedMeal> plannedMeals;
   final List<String> shoppingListExclusions;
+  final Map<String, ShoppingListOverride> shoppingListOverrides;
   final DateTime createdAt;
 
   const MealPlan({
@@ -67,6 +96,7 @@ class MealPlan extends Equatable {
     required this.planDate,
     this.plannedMeals = const [],
     this.shoppingListExclusions = const [],
+    this.shoppingListOverrides = const {},
     required this.createdAt,
   });
 
@@ -88,12 +118,21 @@ class MealPlan extends Equatable {
           .toList();
     }
 
+    final Map<String, ShoppingListOverride> overrides = {};
+    if (data['shoppingListOverrides'] != null && data['shoppingListOverrides'] is Map) {
+      final map = data['shoppingListOverrides'] as Map;
+      map.forEach((key, value) {
+        overrides[key.toString()] = ShoppingListOverride.fromMap(Map<String, dynamic>.from(value as Map));
+      });
+    }
+
     return MealPlan(
       id: doc.id,
       userId: data['userId']?.toString() ?? '',
       planDate: data['planDate'] is Timestamp ? (data['planDate'] as Timestamp).toDate() : DateTime.now(),
       plannedMeals: meals,
       shoppingListExclusions: List<String>.from(data['shoppingListExclusions'] ?? []),
+      shoppingListOverrides: overrides,
       createdAt: data['createdAt'] is Timestamp ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
     );
   }
@@ -104,6 +143,7 @@ class MealPlan extends Equatable {
       'planDate': Timestamp.fromDate(planDate),
       'plannedMeals': plannedMeals.map((m) => m.toMap()).toList(),
       'shoppingListExclusions': shoppingListExclusions,
+      'shoppingListOverrides': shoppingListOverrides.map((k, v) => MapEntry(k, v.toMap())),
       // Keep recipeIds for backward compatibility in the database queries if needed
       'recipeIds': plannedMeals.map((m) => m.recipeId).toList(),
       'createdAt': Timestamp.fromDate(createdAt),
@@ -116,6 +156,7 @@ class MealPlan extends Equatable {
     DateTime? planDate,
     List<PlannedMeal>? plannedMeals,
     List<String>? shoppingListExclusions,
+    Map<String, ShoppingListOverride>? shoppingListOverrides,
     DateTime? createdAt,
   }) {
     return MealPlan(
@@ -124,12 +165,13 @@ class MealPlan extends Equatable {
       planDate: planDate ?? this.planDate,
       plannedMeals: plannedMeals ?? this.plannedMeals,
       shoppingListExclusions: shoppingListExclusions ?? this.shoppingListExclusions,
+      shoppingListOverrides: shoppingListOverrides ?? this.shoppingListOverrides,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
-  List<Object?> get props => [id, userId, planDate, plannedMeals, shoppingListExclusions, createdAt];
+  List<Object?> get props => [id, userId, planDate, plannedMeals, shoppingListExclusions, shoppingListOverrides, createdAt];
 }
 
 /// Grocery list item

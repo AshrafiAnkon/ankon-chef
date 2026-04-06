@@ -12,6 +12,7 @@ import '../../models/pantry_item_model.dart';
 import '../../models/ingredient_model.dart';
 import '../widgets/searchable_ingredient_selector.dart';
 import '../widgets/settings_bottom_sheet.dart';
+import '../../models/unit_constants.dart';
 
 class PantryScreen extends ConsumerStatefulWidget {
   const PantryScreen({super.key});
@@ -483,13 +484,12 @@ class _AddPantryItemSheet extends ConsumerStatefulWidget {
 class _AddPantryItemSheetState extends ConsumerState<_AddPantryItemSheet> {
   String? _selectedIngredientId;
   final _amountController = TextEditingController();
-  final _unitController = TextEditingController(text: 'kg');
+  String _selectedUnit = UnitConstants.units.first;
   DateTime? _expiryDate;
 
   @override
   void dispose() {
     _amountController.dispose();
-    _unitController.dispose();
     super.dispose();
   }
 
@@ -554,7 +554,7 @@ class _AddPantryItemSheetState extends ConsumerState<_AddPantryItemSheet> {
                             const SizedBox(height: 8),
                             TextField(
                               controller: _amountController,
-                              keyboardType: TextInputType.number,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               decoration: InputDecoration(
                                 hintText: 'e.g., 2.5',
                                 filled: true,
@@ -573,15 +573,20 @@ class _AddPantryItemSheetState extends ConsumerState<_AddPantryItemSheet> {
                           children: [
                             Text('Unit', style: AppTextStyles.labelLarge.copyWith(color: AppColors.onSurfaceVariant)),
                             const SizedBox(height: 8),
-                            TextField(
-                              controller: _unitController,
+                            DropdownButtonFormField<String>(
+                              initialValue: _selectedUnit,
+                              items: UnitConstants.units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                              onChanged: (val) {
+                                if (val != null) setState(() => _selectedUnit = val);
+                              },
                               decoration: InputDecoration(
-                                hintText: 'kg',
                                 filled: true,
                                 fillColor: AppColors.surfaceContainerLowest,
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.surfaceContainerHigh)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               ),
+                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onBackground),
                             ),
                           ],
                         ),
@@ -669,7 +674,7 @@ class _AddPantryItemSheetState extends ConsumerState<_AddPantryItemSheet> {
       userId: user.uid,
       ingredientId: _selectedIngredientId!,
       amount: double.tryParse(_amountController.text) ?? 0,
-      unit: _unitController.text,
+      unit: _selectedUnit,
       expiryDate: _expiryDate,
     );
     if (mounted) Navigator.pop(context);
@@ -689,21 +694,20 @@ class _EditPantryItemSheet extends ConsumerStatefulWidget {
 
 class _EditPantryItemSheetState extends ConsumerState<_EditPantryItemSheet> {
   late TextEditingController _amountController;
-  late TextEditingController _unitController;
+  late String _selectedUnit;
   DateTime? _expiryDate;
 
   @override
   void initState() {
     super.initState();
     _amountController = TextEditingController(text: widget.item.amount.toString());
-    _unitController = TextEditingController(text: widget.item.unit);
+    _selectedUnit = UnitConstants.units.contains(widget.item.unit) ? widget.item.unit : UnitConstants.units.first;
     _expiryDate = widget.item.expiryDate;
   }
 
   @override
   void dispose() {
     _amountController.dispose();
-    _unitController.dispose();
     super.dispose();
   }
 
@@ -751,7 +755,7 @@ class _EditPantryItemSheetState extends ConsumerState<_EditPantryItemSheet> {
                             const SizedBox(height: 8),
                             TextField(
                               controller: _amountController,
-                              keyboardType: TextInputType.number,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               decoration: InputDecoration(
                                 filled: true, fillColor: AppColors.surfaceContainerLowest,
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -768,13 +772,20 @@ class _EditPantryItemSheetState extends ConsumerState<_EditPantryItemSheet> {
                           children: [
                             Text('Unit', style: AppTextStyles.labelLarge.copyWith(color: AppColors.onSurfaceVariant)),
                             const SizedBox(height: 8),
-                            TextField(
-                              controller: _unitController,
+                            DropdownButtonFormField<String>(
+                              initialValue: _selectedUnit,
+                              items: UnitConstants.units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                              onChanged: (val) {
+                                if (val != null) setState(() => _selectedUnit = val);
+                              },
                               decoration: InputDecoration(
-                                filled: true, fillColor: AppColors.surfaceContainerLowest,
+                                filled: true,
+                                fillColor: AppColors.surfaceContainerLowest,
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.surfaceContainerHigh)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               ),
+                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onBackground),
                             ),
                           ],
                         ),
@@ -845,7 +856,7 @@ class _EditPantryItemSheetState extends ConsumerState<_EditPantryItemSheet> {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) return;
     final svc = ref.read(pantryServiceProvider);
-    await svc.updatePantryItem(pantryItemId: widget.item.id, amount: amount, unit: _unitController.text, expiryDate: _expiryDate);
+    await svc.updatePantryItem(pantryItemId: widget.item.id, amount: amount, unit: _selectedUnit, expiryDate: _expiryDate);
     if (mounted) Navigator.pop(context);
   }
 }

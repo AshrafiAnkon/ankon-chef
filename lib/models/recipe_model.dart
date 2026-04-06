@@ -20,9 +20,9 @@ class RecipeQuantity extends Equatable {
 
   /// Parse from a legacy string format like "2 cups" or "1.5 kg"
   factory RecipeQuantity.fromString(String value) {
-    if (value.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pieces');
+    if (value.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pcs');
     final parts = value.trim().split(' ');
-    if (parts.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pieces');
+    if (parts.isEmpty) return const RecipeQuantity(amount: 0, unit: 'pcs');
     
     final parsedAmount = double.tryParse(parts.first);
     if (parsedAmount != null) {
@@ -32,7 +32,7 @@ class RecipeQuantity extends Equatable {
           unit: parts.sublist(1).join(' ').trim(),
         );
       }
-      return RecipeQuantity(amount: parsedAmount, unit: 'pieces');
+      return RecipeQuantity(amount: parsedAmount, unit: 'pcs');
     }
     
     return RecipeQuantity(amount: 0, unit: value);
@@ -122,7 +122,7 @@ class Recipe extends Equatable {
         return MapEntry(key, RecipeQuantity.fromString(value));
       } else {
         // Fallback for unexpected types
-        return MapEntry(key, const RecipeQuantity(amount: 0, unit: 'pieces'));
+        return MapEntry(key, const RecipeQuantity(amount: 0, unit: 'pcs'));
       }
     });
   }

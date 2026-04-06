@@ -432,6 +432,8 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                         meals: grouped[period] ?? const [],
                         recipeMap: recipeMap,
                         pantryIds: pantrySet,
+                        mealPlan: mealPlan,
+                        ref: ref,
                         onAddRecipe: () =>
                             _showSelectRecipesDialog(initialMealPeriod: period),
                         onRemoveMeal: mealPlan == null
@@ -507,7 +509,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
         return pantryAsync.when(
           data: (pantryIds) {
             if (mealPlan == null || mealPlan.plannedMeals.isEmpty) {
-              return _inventoryCardStatic();
+              return _inventoryCardStatic(mealPlan);
             }
             return FutureBuilder<List<GroceryItem>>(
               future: ref
@@ -529,14 +531,14 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                 }
                 final items = snapshot.data!;
                 if (items.isEmpty) {
-                  return _inventoryCardStatic();
+                  return _inventoryCardStatic(mealPlan);
                 }
                 final total = items.length;
                 final toBuy = items.where((g) => !g.isAvailable).length;
                 final ready = total - toBuy;
                 final pct = total == 0 ? 84 : ((ready / total) * 100).round();
 
-                return _inventoryCard(readyPercent: pct, itemsToBuy: toBuy);
+                return _inventoryCard(mealPlan: mealPlan, readyPercent: pct, itemsToBuy: toBuy);
               },
             );
           },
@@ -546,7 +548,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               child: CircularProgressIndicator(color: AppColors.primary),
             ),
           ),
-          error: (e, s) => _inventoryCardStatic(),
+          error: (e, s) => _inventoryCardStatic(mealPlan),
         );
       },
       loading: () => const Padding(
@@ -555,15 +557,16 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
       ),
-      error: (e, s) => _inventoryCardStatic(),
+      error: (e, s) => _inventoryCardStatic(null),
     );
   }
 
-  Widget _inventoryCardStatic() {
-    return _inventoryCard(readyPercent: 0, itemsToBuy: 0, isLoading: true);
+  Widget _inventoryCardStatic(MealPlan? mealPlan) {
+    return _inventoryCard(mealPlan: mealPlan, readyPercent: 0, itemsToBuy: 0, isLoading: true);
   }
 
   Widget _inventoryCard({
+    required MealPlan? mealPlan,
     required int readyPercent,
     required int itemsToBuy,
     bool isLoading = false,
@@ -616,12 +619,20 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
             child: OutlinedButton.icon(
               onPressed: isLoading
                   ? null
-                  : () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Adding all items to shopping list...'),
-                        ),
-                      );
+                  : () async {
+                      if (mealPlan == null) return;
+                      
+                      final service = ref.read(mealPlanServiceProvider);
+                      await service.updateShoppingListExclusions(mealPlan.id, []);
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('All missing items added to shopping list'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
                     },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
@@ -749,6 +760,8 @@ class _MealPeriodBlock extends StatelessWidget {
     required this.meals,
     required this.recipeMap,
     required this.pantryIds,
+    required this.mealPlan,
+    required this.ref,
     required this.onAddRecipe,
     required this.onRemoveMeal,
     required this.onStartCooking,
@@ -758,6 +771,8 @@ class _MealPeriodBlock extends StatelessWidget {
   final List<PlannedMeal> meals;
   final Map<String, Recipe> recipeMap;
   final Set<String> pantryIds;
+  final MealPlan? mealPlan;
+  final WidgetRef ref;
   final VoidCallback onAddRecipe;
   final void Function(PlannedMeal)? onRemoveMeal;
   final void Function(Recipe recipe) onStartCooking;
@@ -796,6 +811,7 @@ class _MealPeriodBlock extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _PlannedMealCard(
+                mealPlan: mealPlan!,
                 recipe: recipe,
                 planned: planned,
                 missingCount: missing,
@@ -804,6 +820,19 @@ class _MealPeriodBlock extends StatelessWidget {
                     ? null
                     : () => onRemoveMeal!(planned),
                 onStartCooking: () => onStartCooking(recipe),
+                onAddMissing: () async {
+                  final currentPlan = mealPlan;
+                  if (currentPlan == null) return;
+                  final service = ref.read(mealPlanServiceProvider);
+                  final currentExclusions = List<String>.from(currentPlan.shoppingListExclusions);
+                  
+                  // Remove this recipe's ingredients from deletions if they were excluded
+                  for (final ingredientId in recipe.ingredientIds) {
+                    currentExclusions.remove(ingredientId);
+                  }
+
+                  await service.updateShoppingListExclusions(currentPlan.id, currentExclusions);
+                },
               ),
             );
           }),
@@ -910,20 +939,24 @@ class _DashedRRectPainter extends CustomPainter {
 
 class _PlannedMealCard extends StatelessWidget {
   const _PlannedMealCard({
+    required this.mealPlan,
     required this.recipe,
     required this.planned,
     required this.missingCount,
     required this.inStock,
     required this.onRemove,
     required this.onStartCooking,
+    required this.onAddMissing,
   });
 
+  final MealPlan mealPlan;
   final Recipe recipe;
   final PlannedMeal planned;
   final int missingCount;
   final bool inStock;
   final VoidCallback? onRemove;
   final VoidCallback onStartCooking;
+  final VoidCallback onAddMissing;
 
   @override
   Widget build(BuildContext context) {
@@ -1055,6 +1088,7 @@ class _PlannedMealCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
+                      onAddMissing();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(

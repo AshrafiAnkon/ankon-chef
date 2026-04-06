@@ -26,7 +26,8 @@ Stream<List<MealPlan>> mealPlans(Ref ref) {
 /// Meal plan for a specific date
 @riverpod
 Future<MealPlan?> mealPlanForDate(Ref ref, DateTime date) async {
-  final allPlans = await ref.watch(mealPlansProvider.future);
+  final allPlansAsync = ref.watch(mealPlansProvider);
+  final allPlans = allPlansAsync.value ?? [];
   
   final targetDate = DateTime(date.year, date.month, date.day);
   try {

@@ -9,6 +9,7 @@ import '../../providers/pantry_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/ingredient_model.dart';
 import '../widgets/settings_bottom_sheet.dart';
+import '../../models/unit_constants.dart';
 
 class IngredientsScreen extends ConsumerStatefulWidget {
   const IngredientsScreen({super.key});
@@ -337,12 +338,11 @@ class _IngredientCard extends ConsumerStatefulWidget {
 class _IngredientCardState extends ConsumerState<_IngredientCard> {
   bool _adding = false;
   final _amountController = TextEditingController();
-  final _unitController = TextEditingController();
+  String _selectedUnit = UnitConstants.units.first;
 
   @override
   void dispose() {
     _amountController.dispose();
-    _unitController.dispose();
     super.dispose();
   }
 
@@ -447,40 +447,23 @@ class _IngredientCardState extends ConsumerState<_IngredientCard> {
                     Expanded(
                       flex: 2,
                       child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.outlineVariant.withAlpha(60)),
                         ),
-                        child: TextField(
-                          controller: _unitController,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            hintText: 'Unit',
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            isDense: true,
-                            suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                            suffixIcon: PopupMenuButton<String>(
-                              padding: EdgeInsets.zero,
-                              icon: const Icon(Icons.arrow_drop_down, color: AppColors.outline),
-                              onSelected: (String value) {
-                                _unitController.text = value;
-                                setState(() {});
-                              },
-                              itemBuilder: (BuildContext context) {
-                                return ['kg', 'gm', 'pcs', 'litre', 'ml', 'tbsp', 'tsp', 'cup']
-                                    .map((String choice) {
-                                  return PopupMenuItem<String>(
-                                    value: choice,
-                                    height: 36,
-                                    child: Text(choice, style: AppTextStyles.bodyMedium),
-                                  );
-                                }).toList();
-                              },
-                            ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedUnit,
+                            isExpanded: true,
+                            items: UnitConstants.units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => _selectedUnit = val);
+                            },
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.onBackground),
+                            icon: const Icon(Icons.arrow_drop_down, color: AppColors.outline),
                           ),
-                          style: AppTextStyles.bodyMedium,
                         ),
                       ),
                     ),
@@ -488,7 +471,7 @@ class _IngredientCardState extends ConsumerState<_IngredientCard> {
                     Expanded(
                       flex: 4,
                       child: ElevatedButton(
-                        onPressed: (_adding || _amountController.text.trim().isEmpty || _unitController.text.trim().isEmpty) ? null : _quickAddToPantry,
+                        onPressed: (_adding || _amountController.text.trim().isEmpty) ? null : _quickAddToPantry,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           disabledBackgroundColor: AppColors.secondary.withAlpha(100),
@@ -529,7 +512,7 @@ class _IngredientCardState extends ConsumerState<_IngredientCard> {
       userId: user.uid,
       ingredientId: widget.ingredient.id,
       amount: amount,
-      unit: _unitController.text.trim(),
+      unit: _selectedUnit,
       expiryDate: null,
     );
 

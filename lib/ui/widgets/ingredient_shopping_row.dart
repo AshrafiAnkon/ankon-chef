@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../models/ingredient_model.dart';
 import '../../providers/pantry_provider.dart';
+import '../../models/unit_constants.dart';
 
 class IngredientShoppingRow extends ConsumerStatefulWidget {
   final Ingredient ingredient;
@@ -27,18 +28,7 @@ class _IngredientShoppingRowState extends ConsumerState<IngredientShoppingRow> {
   DateTime? _selectedDate;
   bool _isLoading = false;
 
-  static const List<String> units = [
-    'kg',
-    'g',
-    'L',
-    'ml',
-    'cup',
-    'tbsp',
-    'tsp',
-    'pieces',
-    'bunch',
-    'head',
-  ];
+
 
   @override
   void initState() {
@@ -104,7 +94,7 @@ class _IngredientShoppingRowState extends ConsumerState<IngredientShoppingRow> {
       _amountController.clear();
       _tagsController.clear();
       setState(() {
-        _selectedUnit = 'kg';
+        _selectedUnit = UnitConstants.units.first;
         _selectedDate = null;
       });
 
@@ -184,7 +174,7 @@ class _IngredientShoppingRowState extends ConsumerState<IngredientShoppingRow> {
                           vertical: 8,
                         ),
                       ),
-                      items: units
+                      items: UnitConstants.units
                           .map(
                             (unit) => DropdownMenuItem(
                               value: unit,
@@ -337,7 +327,7 @@ class _IngredientShoppingRowState extends ConsumerState<IngredientShoppingRow> {
                               vertical: 8,
                             ),
                           ),
-                          items: units
+                          items: UnitConstants.units
                               .map(
                                 (unit) => DropdownMenuItem(
                                   value: unit,

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../models/meal_plan_model.dart';
+import '../../models/unit_constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ingredient_provider.dart';
 import '../../providers/meal_plan_provider.dart';
@@ -121,6 +122,7 @@ class ShoppingListScreen extends ConsumerWidget {
                     recipeIds: currentMealPlan.recipeIds,
                     currentIngredientIds: pantryIds,
                     shoppingListExclusions: currentMealPlan.shoppingListExclusions,
+                    shoppingListOverrides: currentMealPlan.shoppingListOverrides,
                   ),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
@@ -201,6 +203,15 @@ class ShoppingListScreen extends ConsumerWidget {
                           item: item,
                           onAddToPantry: (amount, unit) => _addToPantry(context, ref, item.ingredientId, amount, unit),
                           onDelete: () => _deleteFromShoppingList(context, ref, currentMealPlan, item.ingredientId),
+                          onSaveEdit: (amount, unit) async {
+                            await ref.read(mealPlanServiceProvider).updateShoppingListOverride(
+                              currentMealPlan.id,
+                              item.ingredientId,
+                              amount,
+                              unit,
+                            );
+                            // No need to manually refresh, Riverpod's mealPlansProvider (stream) will auto-update
+                          },
                         );
                       }),
                       const SizedBox(height: 48),
@@ -459,11 +470,13 @@ class _IngredientCard extends StatefulWidget {
     required this.item,
     required this.onAddToPantry,
     required this.onDelete,
+    required this.onSaveEdit,
   });
 
   final GroceryItem item;
   final void Function(double amount, String unit) onAddToPantry;
   final VoidCallback onDelete;
+  final void Function(double amount, String unit) onSaveEdit;
 
   @override
   State<_IngredientCard> createState() => _IngredientCardState();
@@ -471,7 +484,7 @@ class _IngredientCard extends StatefulWidget {
 
 class _IngredientCardState extends State<_IngredientCard> {
   late TextEditingController _amountController;
-  late TextEditingController _unitController;
+  late String _selectedUnit;
   bool _isEditing = false;
 
   @override
@@ -482,14 +495,30 @@ class _IngredientCardState extends State<_IngredientCard> {
           ? widget.item.amount.toInt().toString()
           : widget.item.amount.toString(),
     );
-    _unitController = TextEditingController(text: widget.item.unit);
+    _selectedUnit = widget.item.unit;
+    if (!UnitConstants.units.contains(_selectedUnit)) {
+       // if current unit is not in our predefined list, we can either add it or default to first
+       // but here user specified these exact units
+    }
   }
 
   @override
   void dispose() {
     _amountController.dispose();
-    _unitController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _IngredientCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.item.amount != oldWidget.item.amount) {
+      _amountController.text = widget.item.amount == widget.item.amount.toInt()
+          ? widget.item.amount.toInt().toString()
+          : widget.item.amount.toString();
+    }
+    if (widget.item.unit != oldWidget.item.unit) {
+      _selectedUnit = widget.item.unit;
+    }
   }
 
   @override
@@ -557,7 +586,7 @@ class _IngredientCardState extends State<_IngredientCard> {
                       ),
                     ),
                     child: Text(
-                      '${_amountController.text} ${_unitController.text}',
+                      '${_amountController.text} $_selectedUnit',
                       style: AppTextStyles.labelMedium.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.onBackground,
@@ -576,7 +605,7 @@ class _IngredientCardState extends State<_IngredientCard> {
                       );
                       return;
                     }
-                    widget.onAddToPantry(amount, _unitController.text);
+                    widget.onAddToPantry(amount, _selectedUnit);
                   },
                   tooltip: 'Add to Pantry',
                   padding: EdgeInsets.zero,
@@ -594,6 +623,7 @@ class _IngredientCardState extends State<_IngredientCard> {
                       );
                       return;
                     }
+                    widget.onSaveEdit(amount, _selectedUnit);
                     setState(() => _isEditing = false);
                   },
                   padding: EdgeInsets.zero,
@@ -630,8 +660,12 @@ class _IngredientCardState extends State<_IngredientCard> {
                 const SizedBox(width: 8),
                 Expanded(
                   flex: 3,
-                  child: TextField(
-                    controller: _unitController,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: UnitConstants.units.contains(_selectedUnit) ? _selectedUnit : null,
+                    items: UnitConstants.units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _selectedUnit = val);
+                    },
                     decoration: const InputDecoration(
                       labelText: 'Unit',
                       isDense: true,
