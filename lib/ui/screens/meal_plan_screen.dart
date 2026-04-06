@@ -18,11 +18,6 @@ import '../widgets/recipe_image.dart';
 const _kAppBarAvatarUrl =
     'https://lh3.googleusercontent.com/aida-public/AB6AXuCKPrAKao3Dx84rEyi1AfJEV0SKzYQRBzHk8jCPUcIkT6EFIzxh4AFpehx6-IyEaby4qRInGub6FueKfeHdaKHU5rXHAvqwHDqa6l-aUEf4XPWsKSZ3O-YtYWP4utZDQs6Fl1AMzoNvRLMZgycWjWhNdFC8mDAgH06QOXD1A7xwT8BjeQkqX0BDsOQraqMZJVeVqKIjnLaefsKfFBdSrlH9T2EOCznFo-cI0XPD4HFFudHoifVPDWtChBpeI-V8RngHaWuI0f2wp7ui';
 
-const _kSharedAvatarUrls = <String>[
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCKPrAKao3Dx84rEyi1AfJEV0SKzYQRBzHk8jCPUcIkT6EFIzxh4AFpehx6-IyEaby4qRInGub6FueKfeHdaKHU5rXHAvqwHDqa6l-aUEf4XPWsKSZ3O-YtYWP4utZDQs6Fl1AMzoNvRLMZgycWjWhNdFC8mDAgH06QOXD1A7xwT8BjeQkqX0BDsOQraqMZJVeVqKIjnLaefsKfFBdSrlH9T2EOCznFo-cI0XPD4HFFudHoifVPDWtChBpeI-V8RngHaWuI0f2wp7ui',
-  'https://api.dicebear.com/7.x/avataaars/png?seed=chef2',
-];
-
 const _kMealPeriods = <String>[
   'Breakfast',
   'Lunch',
@@ -218,7 +213,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  'Sous-Chef',
+                  'Ankon-Chef',
                   style: AppTextStyles.h3.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w900,
@@ -227,6 +222,13 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               ],
             ),
             actions: [
+              IconButton(
+                icon: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: AppColors.onSurfaceVariant,
+                ),
+                onPressed: () => context.push('/shopping-list'),
+              ),
               IconButton(
                 padding: const EdgeInsets.only(right: 24),
                 icon: const Icon(
@@ -438,11 +440,6 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                                   _removeMealFromPlan(mealPlan, planned),
                         onStartCooking: (recipe) =>
                             context.push('/recipes/${recipe.id}'),
-                        onCheck: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Marked as checked')),
-                          );
-                        },
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -755,7 +752,6 @@ class _MealPeriodBlock extends StatelessWidget {
     required this.onAddRecipe,
     required this.onRemoveMeal,
     required this.onStartCooking,
-    required this.onCheck,
   });
 
   final String title;
@@ -765,7 +761,6 @@ class _MealPeriodBlock extends StatelessWidget {
   final VoidCallback onAddRecipe;
   final void Function(PlannedMeal)? onRemoveMeal;
   final void Function(Recipe recipe) onStartCooking;
-  final VoidCallback onCheck;
 
   @override
   Widget build(BuildContext context) {
@@ -809,7 +804,6 @@ class _MealPeriodBlock extends StatelessWidget {
                     ? null
                     : () => onRemoveMeal!(planned),
                 onStartCooking: () => onStartCooking(recipe),
-                onCheck: onCheck,
               ),
             );
           }),
@@ -922,7 +916,6 @@ class _PlannedMealCard extends StatelessWidget {
     required this.inStock,
     required this.onRemove,
     required this.onStartCooking,
-    required this.onCheck,
   });
 
   final Recipe recipe;
@@ -931,7 +924,6 @@ class _PlannedMealCard extends StatelessWidget {
   final bool inStock;
   final VoidCallback? onRemove;
   final VoidCallback onStartCooking;
-  final VoidCallback onCheck;
 
   @override
   Widget build(BuildContext context) {
@@ -1038,78 +1030,55 @@ class _PlannedMealCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Text(
-                'Shared with 2 others',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 8),
-              ...List.generate(2, (i) {
-                return Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: CircleAvatar(
-                    radius: 12,
-                    backgroundColor: AppColors.surfaceContainerHigh,
-                    backgroundImage: NetworkImage(_kSharedAvatarUrls[i]),
-                  ),
-                );
-              }),
-            ],
-          ),
           const SizedBox(height: 12),
           Row(
             children: [
-              if (inStock) ...[
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onCheck,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.secondary,
-                      side: const BorderSide(color: AppColors.secondary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text('Check'),
-                  ),
-                ),
-                const SizedBox(width: 8),
+              if (inStock)
                 Expanded(
                   child: ElevatedButton(
                     onPressed: onStartCooking,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.secondary,
                       foregroundColor: AppColors.onSecondary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text('Start Cooking'),
+                    child: const Text(
+                      'Start Cooking',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
-                ),
-              ] else ...[
+                )
+              else
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.surfaceContainerHigh,
-                      foregroundColor: AppColors.outline,
-                      disabledBackgroundColor: AppColors.surfaceContainerHigh,
-                      disabledForegroundColor: AppColors.outline,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Added missing ingredients for ${recipe.name} to shopping list',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text('Missing Ingredients'),
+                    icon: const Icon(Icons.add_shopping_cart, size: 18),
+                    label: const Text(
+                      'Add Missing to List',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
-              ],
             ],
           ),
         ],

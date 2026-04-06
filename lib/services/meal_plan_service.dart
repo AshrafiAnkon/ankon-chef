@@ -80,10 +80,18 @@ class MealPlanService {
     await _firestore.collection('mealPlans').doc(mealPlanId).delete();
   }
 
+  /// Update shopping list exclusions
+  Future<void> updateShoppingListExclusions(String mealPlanId, List<String> exclusions) async {
+    await _firestore.collection('mealPlans').doc(mealPlanId).update({
+      'shoppingListExclusions': exclusions,
+    });
+  }
+
   /// Generate grocery list for meal plan
   Future<List<GroceryItem>> generateGroceryList({
     required List<String> recipeIds,
     required List<String> currentIngredientIds,
+    List<String> shoppingListExclusions = const [],
   }) async {
     // Get all recipes in the meal plan
     final recipeDocs = await Future.wait(
@@ -108,17 +116,36 @@ class MealPlanService {
       ),
     );
 
+    // Combine quantities from all recipes
+    final totalQuantities = <String, double>{};
+    final ingredientUnits = <String, String>{};
+
+    for (final recipe in recipes) {
+      if (recipe.ingredientQuantities != null) {
+        recipe.ingredientQuantities!.forEach((id, q) {
+          totalQuantities[id] = (totalQuantities[id] ?? 0) + q.amount;
+          ingredientUnits[id] = q.unit; // Simplify: use the last encountered unit
+        });
+      }
+    }
+
     final groceryItems = <GroceryItem>[];
 
     for (final doc in ingredientDocs) {
       if (doc.exists) {
         final ingredient = Ingredient.fromFirestore(doc);
+        
+        // Skip excluded ingredients
+        if (shoppingListExclusions.contains(ingredient.id)) continue;
+
         final isAvailable = currentIngredientIds.contains(ingredient.id);
 
         groceryItems.add(
           GroceryItem(
             ingredientId: ingredient.id,
             ingredientName: ingredient.name,
+            amount: totalQuantities[ingredient.id] ?? 0,
+            unit: ingredientUnits[ingredient.id] ?? '',
             isAvailable: isAvailable,
           ),
         );

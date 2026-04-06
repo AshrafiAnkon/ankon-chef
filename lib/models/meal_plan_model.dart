@@ -58,6 +58,7 @@ class MealPlan extends Equatable {
   final String userId;
   final DateTime planDate;
   final List<PlannedMeal> plannedMeals;
+  final List<String> shoppingListExclusions;
   final DateTime createdAt;
 
   const MealPlan({
@@ -65,6 +66,7 @@ class MealPlan extends Equatable {
     required this.userId,
     required this.planDate,
     this.plannedMeals = const [],
+    this.shoppingListExclusions = const [],
     required this.createdAt,
   });
 
@@ -91,6 +93,7 @@ class MealPlan extends Equatable {
       userId: data['userId']?.toString() ?? '',
       planDate: data['planDate'] is Timestamp ? (data['planDate'] as Timestamp).toDate() : DateTime.now(),
       plannedMeals: meals,
+      shoppingListExclusions: List<String>.from(data['shoppingListExclusions'] ?? []),
       createdAt: data['createdAt'] is Timestamp ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
     );
   }
@@ -100,6 +103,7 @@ class MealPlan extends Equatable {
       'userId': userId,
       'planDate': Timestamp.fromDate(planDate),
       'plannedMeals': plannedMeals.map((m) => m.toMap()).toList(),
+      'shoppingListExclusions': shoppingListExclusions,
       // Keep recipeIds for backward compatibility in the database queries if needed
       'recipeIds': plannedMeals.map((m) => m.recipeId).toList(),
       'createdAt': Timestamp.fromDate(createdAt),
@@ -111,6 +115,7 @@ class MealPlan extends Equatable {
     String? userId,
     DateTime? planDate,
     List<PlannedMeal>? plannedMeals,
+    List<String>? shoppingListExclusions,
     DateTime? createdAt,
   }) {
     return MealPlan(
@@ -118,26 +123,31 @@ class MealPlan extends Equatable {
       userId: userId ?? this.userId,
       planDate: planDate ?? this.planDate,
       plannedMeals: plannedMeals ?? this.plannedMeals,
+      shoppingListExclusions: shoppingListExclusions ?? this.shoppingListExclusions,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
-  List<Object?> get props => [id, userId, planDate, plannedMeals, createdAt];
+  List<Object?> get props => [id, userId, planDate, plannedMeals, shoppingListExclusions, createdAt];
 }
 
 /// Grocery list item
 class GroceryItem extends Equatable {
   final String ingredientId;
   final String ingredientName;
+  final double amount;
+  final String unit;
   final bool isAvailable; // whether user already has this
 
   const GroceryItem({
     required this.ingredientId,
     required this.ingredientName,
+    this.amount = 0,
+    this.unit = '',
     required this.isAvailable,
   });
 
   @override
-  List<Object?> get props => [ingredientId, ingredientName, isAvailable];
+  List<Object?> get props => [ingredientId, ingredientName, amount, unit, isAvailable];
 }
