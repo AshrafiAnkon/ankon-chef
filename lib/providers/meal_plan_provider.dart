@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../services/meal_plan_service.dart';
 import '../models/meal_plan_model.dart';
 import 'auth_provider.dart';
+import 'ingredient_provider.dart';
 
 part 'meal_plan_provider.g.dart';
 
@@ -40,6 +41,25 @@ Future<MealPlan?> mealPlanForDate(Ref ref, DateTime date) async {
   } catch (_) {
     return null;
   }
+}
+
+/// Items to buy for a specific date
+@riverpod
+Future<int> itemsToBuyForDate(Ref ref, DateTime date) async {
+  final mealPlan = await ref.watch(mealPlanForDateProvider(date).future);
+  if (mealPlan == null) return 0;
+
+  final pantryIdsAsync = ref.watch(currentIngredientIdsProvider);
+  final pantryIds = pantryIdsAsync.value ?? [];
+
+  final items = await ref.watch(mealPlanServiceProvider).generateGroceryList(
+    recipeIds: mealPlan.recipeIds,
+    currentIngredientIds: pantryIds,
+    shoppingListExclusions: mealPlan.shoppingListExclusions,
+    shoppingListOverrides: mealPlan.shoppingListOverrides,
+  );
+
+  return items.where((g) => !g.isAvailable).length;
 }
 
 

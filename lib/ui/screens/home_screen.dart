@@ -409,7 +409,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
               ),
               if (!isSearching)
                 GestureDetector(
-                  onTap: () => context.push('/meal-plan'),
+                  onTap: () => context.go('/meal-plan'),
                   child: Text(
                     'View Planner',
                     style: AppTextStyles.labelLarge.copyWith(
@@ -529,63 +529,179 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
 
               return Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.lightbulb_outline, size: 48, color: AppColors.primary),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Suggestion for today',
-                        style: AppTextStyles.h3.copyWith(color: AppColors.onBackground),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        suggestedRecipe.name,
-                        style: AppTextStyles.labelLarge.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onBackground,
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          // Open add-to-planner sheet with pre-selected recipe and appropriate time slot
-                          final now = TimeOfDay.now();
-                          String initialPeriod = 'Dinner';
-                          if (now.hour < 11) {
-                            initialPeriod = 'Breakfast';
-                          } else if (now.hour < 15) {
-                            initialPeriod = 'Lunch';
-                          } else if (now.hour < 17) {
-                            initialPeriod = 'Afternoon Snacks';
-                          }
-
-                          showModalBottomSheet<void>(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) => Padding(
-                              padding: EdgeInsets.only(
-                                bottom: MediaQuery.of(context).viewInsets.bottom,
-                              ),
-                              child: SelectRecipesBottomSheet(
-                                selectedDate: DateTime.now(),
-                                initialMealPeriod: initialPeriod,
-                                initialSuggestedRecipe: suggestedRecipe,
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Image section
+                        if (suggestedRecipe.imageUrl != null && suggestedRecipe.imageUrl!.isNotEmpty)
+                          SizedBox(
+                            height: 200,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  suggestedRecipe.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    color: AppColors.surface,
+                                    child: const Icon(Icons.restaurant, size: 48, color: AppColors.onSurfaceVariant),
+                                  ),
+                                ),
+                                // Gradient overlay
+                                Positioned.fill(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.black.withValues(alpha: 0.7),
+                                        ],
+                                        stops: const [0.6, 1.0],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // "Suggestion for today" badge
+                                Positioned(
+                                  top: 16,
+                                  left: 16,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.lightbulb_outline, size: 16, color: AppColors.onPrimary),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Suggestion for today',
+                                          style: AppTextStyles.labelSmall.copyWith(
+                                            color: AppColors.onPrimary,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            height: 120,
+                            color: AppColors.primaryContainer,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.lightbulb_outline, size: 40, color: AppColors.onPrimaryContainer),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Suggestion for today',
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      color: AppColors.onPrimaryContainer,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.add_circle_outline),
-                        label: const Text('Add this to today\'s plan'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.onPrimary,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          ),
+                        
+                        // Content section
+                        Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                suggestedRecipe.name,
+                                style: AppTextStyles.h3.copyWith(
+                                  color: AppColors.onSurface,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.timer_outlined, size: 16, color: AppColors.onSurfaceVariant),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${(suggestedRecipe.prepTime ?? 0) + (suggestedRecipe.cookTime ?? 0)} mins',
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      color: AppColors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // Open add-to-planner sheet with pre-selected recipe and appropriate time slot
+                                      final now = TimeOfDay.now();
+                                      String initialPeriod = 'Dinner';
+                                      if (now.hour < 11) {
+                                        initialPeriod = 'Breakfast';
+                                      } else if (now.hour < 15) {
+                                        initialPeriod = 'Lunch';
+                                      } else if (now.hour < 17) {
+                                        initialPeriod = 'Afternoon Snacks';
+                                      }
+
+                                      showModalBottomSheet<void>(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.transparent,
+                                        builder: (context) => Padding(
+                                          padding: EdgeInsets.only(
+                                            bottom: MediaQuery.of(context).viewInsets.bottom,
+                                          ),
+                                          child: SelectRecipesBottomSheet(
+                                            selectedDate: DateTime.now(),
+                                            initialMealPeriod: initialPeriod,
+                                            initialSuggestedRecipe: suggestedRecipe,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: AppColors.onPrimary,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: const Text('Add to Plan'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );

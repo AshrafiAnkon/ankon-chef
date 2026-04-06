@@ -68,7 +68,7 @@ final class FilteredRecipesProvider
   }
 }
 
-String _$filteredRecipesHash() => r'a967f295572b2a3ea7c233c6741146027481bfaa';
+String _$filteredRecipesHash() => r'8c2e7e9b1c98aba82d947695332d82d444e1028a';
 
 /// Filtered recipes based on filter options
 
@@ -90,6 +90,65 @@ final class FilteredRecipesFamily extends $Family
 
   @override
   String toString() => r'filteredRecipesProvider';
+}
+
+/// Active filter options state
+
+@ProviderFor(ActiveFilterOptions)
+final activeFilterOptionsProvider = ActiveFilterOptionsProvider._();
+
+/// Active filter options state
+final class ActiveFilterOptionsProvider
+    extends $NotifierProvider<ActiveFilterOptions, FilterOptions> {
+  /// Active filter options state
+  ActiveFilterOptionsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'activeFilterOptionsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$activeFilterOptionsHash();
+
+  @$internal
+  @override
+  ActiveFilterOptions create() => ActiveFilterOptions();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(FilterOptions value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<FilterOptions>(value),
+    );
+  }
+}
+
+String _$activeFilterOptionsHash() =>
+    r'549e21c991e76ab2fc452488a4f2a48f532308d3';
+
+/// Active filter options state
+
+abstract class _$ActiveFilterOptions extends $Notifier<FilterOptions> {
+  FilterOptions build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<FilterOptions, FilterOptions>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<FilterOptions, FilterOptions>,
+              FilterOptions,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
 }
 
 /// Get pantry ingredients (ingredient details from pantry items)

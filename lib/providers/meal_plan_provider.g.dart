@@ -158,7 +158,7 @@ final class MealPlanForDateProvider
   }
 }
 
-String _$mealPlanForDateHash() => r'1d776ecf60e48978a36b26d6d237bf29c6fc72c2';
+String _$mealPlanForDateHash() => r'feb9f9ff20ad75dbde5d9e043208fa60bbd61d35';
 
 /// Meal plan for a specific date
 
@@ -180,4 +180,82 @@ final class MealPlanForDateFamily extends $Family
 
   @override
   String toString() => r'mealPlanForDateProvider';
+}
+
+/// Items to buy for a specific date
+
+@ProviderFor(itemsToBuyForDate)
+final itemsToBuyForDateProvider = ItemsToBuyForDateFamily._();
+
+/// Items to buy for a specific date
+
+final class ItemsToBuyForDateProvider
+    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
+    with $FutureModifier<int>, $FutureProvider<int> {
+  /// Items to buy for a specific date
+  ItemsToBuyForDateProvider._({
+    required ItemsToBuyForDateFamily super.from,
+    required DateTime super.argument,
+  }) : super(
+         retry: null,
+         name: r'itemsToBuyForDateProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$itemsToBuyForDateHash();
+
+  @override
+  String toString() {
+    return r'itemsToBuyForDateProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<int> create(Ref ref) {
+    final argument = this.argument as DateTime;
+    return itemsToBuyForDate(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ItemsToBuyForDateProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$itemsToBuyForDateHash() => r'2b01bfbe0b6a33fadfdf5ac3036c7fe1b68d2a5d';
+
+/// Items to buy for a specific date
+
+final class ItemsToBuyForDateFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<int>, DateTime> {
+  ItemsToBuyForDateFamily._()
+    : super(
+        retry: null,
+        name: r'itemsToBuyForDateProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Items to buy for a specific date
+
+  ItemsToBuyForDateProvider call(DateTime date) =>
+      ItemsToBuyForDateProvider._(argument: date, from: this);
+
+  @override
+  String toString() => r'itemsToBuyForDateProvider';
 }

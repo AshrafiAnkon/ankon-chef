@@ -213,12 +213,23 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               ],
             ),
             actions: [
-              IconButton(
-                icon: const Icon(
-                  Icons.shopping_cart_outlined,
-                  color: AppColors.onSurfaceVariant,
-                ),
-                onPressed: () => context.push('/shopping-list'),
+              Consumer(
+                builder: (context, ref, child) {
+                  final itemsCountAsync = ref.watch(itemsToBuyForDateProvider(_selectedDate));
+                  final count = itemsCountAsync.value ?? 0;
+                  
+                  return IconButton(
+                    icon: Badge(
+                      isLabelVisible: count > 0,
+                      label: Text(count.toString()),
+                      child: const Icon(
+                        Icons.shopping_cart_outlined,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                    onPressed: () => context.push('/shopping-list'),
+                  );
+                },
               ),
               IconButton(
                 padding: const EdgeInsets.only(right: 24),
@@ -292,13 +303,26 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: () => context.push('/shopping-list'),
-            child: const SizedBox(
+            child: SizedBox(
               width: 56,
               height: 56,
-              child: Icon(
-                Icons.shopping_cart_outlined,
-                color: AppColors.onPrimary,
-                size: 26,
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final itemsCountAsync = ref.watch(itemsToBuyForDateProvider(_selectedDate));
+                  final count = itemsCountAsync.value ?? 0;
+                  
+                  return Center(
+                    child: Badge(
+                      isLabelVisible: count > 0,
+                      label: Text(count.toString()),
+                      child: const Icon(
+                        Icons.shopping_cart_outlined,
+                        color: AppColors.onPrimary,
+                        size: 26,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ),

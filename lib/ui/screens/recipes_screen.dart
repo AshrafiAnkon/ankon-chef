@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/pantry_provider.dart';
+import '../../providers/filter_recipe_provider.dart';
 import '../widgets/settings_bottom_sheet.dart';
 import '../widgets/recipe_image.dart';
 import '../../models/recipe_model.dart';
@@ -31,8 +32,9 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeFilters = ref.watch(activeFilterOptionsProvider);
     final recipesAsync = _searchQuery.isEmpty
-        ? ref.watch(userRecipesProvider)
+        ? ref.watch(filteredRecipesProvider(activeFilters))
         : ref.watch(searchRecipesProvider(_searchQuery));
 
     final pantryItemsAsync = ref.watch(pantryItemsProvider);
