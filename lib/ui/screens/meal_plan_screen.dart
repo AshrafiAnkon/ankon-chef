@@ -328,7 +328,8 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final day = days[index];
-          final isSelected = day.year == _selectedDate.year &&
+          final isSelected =
+              day.year == _selectedDate.year &&
               day.month == _selectedDate.month &&
               day.day == _selectedDate.day;
           final dayLabel = DateFormat('E').format(day).toUpperCase();
@@ -391,8 +392,11 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   }
 
   Widget _buildMealSections() {
-    final normalizedDate =
-        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final normalizedDate = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
     final mealPlanAsync = ref.watch(mealPlanForDateProvider(normalizedDate));
     final recipesAsync = ref.watch(userRecipesProvider);
     final pantryAsync = ref.watch(currentIngredientIdsProvider);
@@ -403,9 +407,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           data: (allRecipes) {
             return pantryAsync.when(
               data: (pantryIds) {
-                final recipeMap = {
-                  for (final r in allRecipes) r.id: r,
-                };
+                final recipeMap = {for (final r in allRecipes) r.id: r};
                 final pantrySet = pantryIds.toSet();
 
                 final grouped = <String, List<PlannedMeal>>{};
@@ -430,27 +432,12 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                         pantryIds: pantrySet,
                         onAddRecipe: () =>
                             _showSelectRecipesDialog(initialMealPeriod: period),
-                        onQuickLog: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Quick log (demo)')),
-                          );
-                        },
                         onRemoveMeal: mealPlan == null
                             ? null
                             : (planned) =>
-                                _removeMealFromPlan(mealPlan, planned),
+                                  _removeMealFromPlan(mealPlan, planned),
                         onStartCooking: (recipe) =>
                             context.push('/recipes/${recipe.id}'),
-                        onAddIngredients: (recipe) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Add ingredients for ${recipe.name}',
-                              ),
-                            ),
-                          );
-                          context.push('/pantry');
-                        },
                         onCheck: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Marked as checked')),
@@ -490,15 +477,11 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     );
   }
 
-  Future<void> _removeMealFromPlan(
-    MealPlan mealPlan,
-    PlannedMeal meal,
-  ) async {
+  Future<void> _removeMealFromPlan(MealPlan mealPlan, PlannedMeal meal) async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    final updated =
-        mealPlan.plannedMeals.where((m) => m != meal).toList();
+    final updated = mealPlan.plannedMeals.where((m) => m != meal).toList();
     final service = ref.read(mealPlanServiceProvider);
 
     if (updated.isEmpty) {
@@ -514,8 +497,11 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   }
 
   Widget _buildInventoryBento() {
-    final normalizedDate =
-        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final normalizedDate = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
     final mealPlanAsync = ref.watch(mealPlanForDateProvider(normalizedDate));
     final pantryAsync = ref.watch(currentIngredientIdsProvider);
 
@@ -527,7 +513,9 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               return _inventoryCardStatic();
             }
             return FutureBuilder<List<GroceryItem>>(
-              future: ref.read(mealPlanServiceProvider).generateGroceryList(
+              future: ref
+                  .read(mealPlanServiceProvider)
+                  .generateGroceryList(
                     recipeIds: mealPlan.recipeIds,
                     currentIngredientIds: pantryIds,
                   ),
@@ -536,8 +524,9 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(
-                      child:
-                          CircularProgressIndicator(color: AppColors.primary),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
                     ),
                   );
                 }
@@ -550,10 +539,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                 final ready = total - toBuy;
                 final pct = total == 0 ? 84 : ((ready / total) * 100).round();
 
-                return _inventoryCard(
-                  readyPercent: pct,
-                  itemsToBuy: toBuy,
-                );
+                return _inventoryCard(readyPercent: pct, itemsToBuy: toBuy);
               },
             );
           },
@@ -577,12 +563,13 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   }
 
   Widget _inventoryCardStatic() {
-    return _inventoryCard(readyPercent: 84, itemsToBuy: 12);
+    return _inventoryCard(readyPercent: 0, itemsToBuy: 0, isLoading: true);
   }
 
   Widget _inventoryCard({
     required int readyPercent,
     required int itemsToBuy,
+    bool isLoading = false,
   }) {
     return Container(
       width: double.infinity,
@@ -630,11 +617,15 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Auto-Sync Pantry (demo)')),
-                );
-              },
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Adding all items to shopping list...'),
+                        ),
+                      );
+                    },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
@@ -643,9 +634,9 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              icon: const Icon(Icons.sync, size: 20),
+              icon: const Icon(Icons.add_shopping_cart, size: 20),
               label: Text(
-                'Auto-Sync Pantry',
+                'Add All Items to Shopping List',
                 style: AppTextStyles.labelLarge.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -762,10 +753,8 @@ class _MealPeriodBlock extends StatelessWidget {
     required this.recipeMap,
     required this.pantryIds,
     required this.onAddRecipe,
-    required this.onQuickLog,
     required this.onRemoveMeal,
     required this.onStartCooking,
-    required this.onAddIngredients,
     required this.onCheck,
   });
 
@@ -774,10 +763,8 @@ class _MealPeriodBlock extends StatelessWidget {
   final Map<String, Recipe> recipeMap;
   final Set<String> pantryIds;
   final VoidCallback onAddRecipe;
-  final VoidCallback onQuickLog;
   final void Function(PlannedMeal)? onRemoveMeal;
   final void Function(Recipe recipe) onStartCooking;
-  final void Function(Recipe recipe) onAddIngredients;
   final VoidCallback onCheck;
 
   @override
@@ -794,7 +781,7 @@ class _MealPeriodBlock extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (meals.isEmpty)
-          _EmptyMealSlot(onAddRecipe: onAddRecipe, onQuickLog: onQuickLog)
+          _EmptyMealSlot(onAddRecipe: onAddRecipe)
         else
           ...meals.map((planned) {
             final recipe = recipeMap[planned.recipeId];
@@ -822,7 +809,6 @@ class _MealPeriodBlock extends StatelessWidget {
                     ? null
                     : () => onRemoveMeal!(planned),
                 onStartCooking: () => onStartCooking(recipe),
-                onAddIngredients: () => onAddIngredients(recipe),
                 onCheck: onCheck,
               ),
             );
@@ -833,13 +819,9 @@ class _MealPeriodBlock extends StatelessWidget {
 }
 
 class _EmptyMealSlot extends StatelessWidget {
-  const _EmptyMealSlot({
-    required this.onAddRecipe,
-    required this.onQuickLog,
-  });
+  const _EmptyMealSlot({required this.onAddRecipe});
 
   final VoidCallback onAddRecipe;
-  final VoidCallback onQuickLog;
 
   @override
   Widget build(BuildContext context) {
@@ -855,7 +837,7 @@ class _EmptyMealSlot extends StatelessWidget {
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 TextButton.icon(
                   onPressed: onAddRecipe,
@@ -865,17 +847,6 @@ class _EmptyMealSlot extends StatelessWidget {
                     style: AppTextStyles.labelLarge.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: onQuickLog,
-                  icon: const Icon(Icons.edit_note, color: AppColors.outline),
-                  label: Text(
-                    'Quick Log',
-                    style: AppTextStyles.labelLarge.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -951,7 +922,6 @@ class _PlannedMealCard extends StatelessWidget {
     required this.inStock,
     required this.onRemove,
     required this.onStartCooking,
-    required this.onAddIngredients,
     required this.onCheck,
   });
 
@@ -961,7 +931,6 @@ class _PlannedMealCard extends StatelessWidget {
   final bool inStock;
   final VoidCallback? onRemove;
   final VoidCallback onStartCooking;
-  final VoidCallback onAddIngredients;
   final VoidCallback onCheck;
 
   @override
@@ -1126,20 +1095,6 @@ class _PlannedMealCard extends StatelessWidget {
                 ),
               ] else ...[
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: onAddIngredients,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text('Add Ingredients'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
                   child: ElevatedButton(
                     onPressed: null,
                     style: ElevatedButton.styleFrom(
@@ -1151,7 +1106,7 @@ class _PlannedMealCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text('Start'),
+                    child: const Text('Missing Ingredients'),
                   ),
                 ),
               ],
@@ -1164,10 +1119,7 @@ class _PlannedMealCard extends StatelessWidget {
 }
 
 class _UnknownRecipeCard extends StatelessWidget {
-  const _UnknownRecipeCard({
-    required this.planned,
-    required this.onRemove,
-  });
+  const _UnknownRecipeCard({required this.planned, required this.onRemove});
 
   final PlannedMeal planned;
   final VoidCallback? onRemove;
@@ -1192,10 +1144,7 @@ class _UnknownRecipeCard extends StatelessWidget {
             ),
           ),
           if (onRemove != null)
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: onRemove,
-            ),
+            IconButton(icon: const Icon(Icons.close), onPressed: onRemove),
         ],
       ),
     );
@@ -1237,8 +1186,9 @@ class _NavBarItem extends StatelessWidget {
             Text(
               label,
               style: AppTextStyles.labelSmall.copyWith(
-                color:
-                    isActive ? AppColors.primary : AppColors.onSurfaceVariant,
+                color: isActive
+                    ? AppColors.primary
+                    : AppColors.onSurfaceVariant,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
                 fontSize: 10,
               ),
@@ -1282,8 +1232,7 @@ class _SelectRecipesBottomSheetState
   @override
   void initState() {
     super.initState();
-    _selectedMealPeriod =
-        widget.initialMealPeriod ?? 'Dinner';
+    _selectedMealPeriod = widget.initialMealPeriod ?? 'Dinner';
     if (!_kMealPeriods.contains(_selectedMealPeriod)) {
       _selectedMealPeriod = 'Dinner';
     }
@@ -1358,8 +1307,9 @@ class _SelectRecipesBottomSheetState
         return;
       }
 
-      final existingPlan =
-          await ref.read(mealPlanForDateProvider(widget.selectedDate).future);
+      final existingPlan = await ref.read(
+        mealPlanForDateProvider(widget.selectedDate).future,
+      );
       final existing = existingPlan?.plannedMeals ?? const <PlannedMeal>[];
 
       final merged = <PlannedMeal>[...existing, ..._pendingMeals];
@@ -1547,7 +1497,8 @@ class _SelectRecipesBottomSheetState
                             children: [
                               IconButton.filled(
                                 style: IconButton.styleFrom(
-                                  backgroundColor: AppColors.surfaceContainerHigh,
+                                  backgroundColor:
+                                      AppColors.surfaceContainerHigh,
                                   foregroundColor: AppColors.onBackground,
                                 ),
                                 onPressed: _servings > 1
@@ -1556,8 +1507,9 @@ class _SelectRecipesBottomSheetState
                                 icon: const Icon(Icons.remove, size: 18),
                               ),
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
                                 child: Text(
                                   '$_servings',
                                   style: AppTextStyles.h4.copyWith(
@@ -1570,8 +1522,7 @@ class _SelectRecipesBottomSheetState
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: AppColors.onPrimary,
                                 ),
-                                onPressed: () =>
-                                    setState(() => _servings++),
+                                onPressed: () => setState(() => _servings++),
                                 icon: const Icon(Icons.add, size: 18),
                               ),
                             ],
@@ -1596,8 +1547,10 @@ class _SelectRecipesBottomSheetState
                       hintStyle: AppTextStyles.bodyMedium.copyWith(
                         color: AppColors.outline,
                       ),
-                      prefixIcon:
-                          const Icon(Icons.search, color: AppColors.outline),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AppColors.outline,
+                      ),
                       filled: true,
                       fillColor: AppColors.surfaceContainerLowest,
                       border: OutlineInputBorder(
@@ -1675,15 +1628,13 @@ class _SelectRecipesBottomSheetState
                           var filtered = recipes
                               .where(
                                 (r) => r.name.toLowerCase().contains(
-                                      _searchQuery.toLowerCase(),
-                                    ),
+                                  _searchQuery.toLowerCase(),
+                                ),
                               )
                               .toList();
                           if (_pantryOnly) {
                             filtered = filtered
-                                .where(
-                                  (r) => _isFullyStocked(r, pantrySet),
-                                )
+                                .where((r) => _isFullyStocked(r, pantrySet))
                                 .toList();
                           }
 
@@ -1742,11 +1693,11 @@ class _SelectRecipesBottomSheetState
                                             children: [
                                               Text(
                                                 recipe.name,
-                                                style: AppTextStyles
-                                                    .labelLarge
+                                                style: AppTextStyles.labelLarge
                                                     .copyWith(
-                                                  fontWeight: FontWeight.w700,
-                                                ),
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
@@ -1754,9 +1705,9 @@ class _SelectRecipesBottomSheetState
                                                 '${recipe.ingredientIds.length} ingredients',
                                                 style: AppTextStyles.bodySmall
                                                     .copyWith(
-                                                  color: AppColors
-                                                      .onSurfaceVariant,
-                                                ),
+                                                      color: AppColors
+                                                          .onSurfaceVariant,
+                                                    ),
                                               ),
                                             ],
                                           ),
@@ -1828,30 +1779,30 @@ class _SelectRecipesBottomSheetState
                     children: [
                       Expanded(
                         child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            isExpanded: true,
-                            value: _reminderDraft,
-                            items: const [
-                              DropdownMenuItem(
-                                value: '15 mins before',
-                                child: Text('15 mins before'),
-                              ),
-                              DropdownMenuItem(
-                                value: '30 mins before',
-                                child: Text('30 mins before'),
-                              ),
-                            ],
-                            onChanged: (v) =>
-                                setState(() => _reminderDraft = v),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: _reminderDraft,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: '15 mins before',
+                                  child: Text('15 mins before'),
+                                ),
+                                DropdownMenuItem(
+                                  value: '30 mins before',
+                                  child: Text('30 mins before'),
+                                ),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _reminderDraft = v),
+                            ),
                           ),
                         ),
-                      ),
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
@@ -1908,8 +1859,9 @@ class _SelectRecipesBottomSheetState
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed:
-                      (_pendingMeals.isEmpty || _isSaving) ? null : _confirm,
+                  onPressed: (_pendingMeals.isEmpty || _isSaving)
+                      ? null
+                      : _confirm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.onPrimary,
@@ -1961,8 +1913,7 @@ class _PendingMealRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return recipesAsync.when(
       data: (recipes) {
-        final matches =
-            recipes.where((r) => r.id == planned.recipeId);
+        final matches = recipes.where((r) => r.id == planned.recipeId);
         final recipe = matches.isEmpty ? null : matches.first;
         final name = recipe?.name ?? planned.recipeId;
         return Container(
