@@ -7,6 +7,8 @@ import '../theme/app_text_styles.dart';
 import '../widgets/pantry_ingredient_multi_select.dart';
 import '../../providers/filter_recipe_provider.dart';
 import '../../models/ingredient_model.dart';
+import '../../models/recipe_model.dart';
+import '../widgets/recipe_image.dart';
 
 class FilterRecipesScreen extends ConsumerStatefulWidget {
   const FilterRecipesScreen({super.key});
@@ -75,6 +77,22 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
     super.dispose();
   }
 
+  void _updateGlobalFilters() {
+    final filterOptions = FilterOptions(
+      pantryIngredientsOnly: _pantryMatch,
+      filterByChoice: _ingredientsToggle,
+      selectedIngredientIds: _ingredientsToggle ? _selectedIngredientIds : [],
+      matchAll: _matchAll,
+      tags: _selectedTags,
+      filterByNutritionTime: _nutritionToggle,
+      maxPrepTime: _nutritionToggle ? _maxPrepTime.toInt() : null,
+      maxCookTime: _nutritionToggle ? _maxCookTime.toInt() : null,
+      maxCalories: _nutritionToggle ? _maxCalories.toInt() : null,
+      showOnlyFavorites: _showFavorites,
+    );
+    ref.read(activeFilterOptionsProvider.notifier).updateOptions(filterOptions);
+  }
+
   void _clearFilters() {
     setState(() {
       _pantryMatch = false;
@@ -90,6 +108,7 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
       _maxCalories = 800;
       _showFavorites = false;
     });
+    _updateGlobalFilters();
   }
 
   List<String> get _filteredTags {
@@ -102,47 +121,38 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
   @override
   Widget build(BuildContext context) {
     final pantryIngredientsAsync = ref.watch(pantryIngredientsProvider);
+    final activeFilters = ref.watch(activeFilterOptionsProvider);
+    final filteredAsync = ref.watch(filteredRecipesProvider(activeFilters));
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: AppColors.surface,
       appBar: _buildAppBar(),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 80,
-              bottom: 120, // Space for bottom actions if needed
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 24),
-                  _buildPantryMatchSection(),
-                  const SizedBox(height: 32),
-                  _buildIngredientsSection(pantryIngredientsAsync),
-                  const SizedBox(height: 32),
-                  _buildFilterByTagsSection(),
-                  const SizedBox(height: 32),
-                  _buildNutritionalAndTimeSection(),
-                  const SizedBox(height: 32),
-                  _buildFavoritesSection(),
-                  const SizedBox(height: 32),
-                  _buildVisualDecorator(),
-                ],
-              ),
-            ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+          bottom: 32,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 24),
+              _buildPantryMatchSection(),
+              const SizedBox(height: 32),
+              _buildIngredientsSection(pantryIngredientsAsync),
+              const SizedBox(height: 32),
+              _buildFilterByTagsSection(),
+              const SizedBox(height: 32),
+              _buildNutritionalAndTimeSection(),
+              const SizedBox(height: 32),
+              _buildFavoritesSection(),
+              const SizedBox(height: 48),
+              _buildFilteredRecipes(filteredAsync),
+            ],
           ),
-          // Bottom Actions
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildBottomActions(),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -241,7 +251,10 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
           ),
           _CustomSwitch(
             value: _pantryMatch,
-            onChanged: (v) => setState(() => _pantryMatch = v),
+            onChanged: (v) {
+              setState(() => _pantryMatch = v);
+              _updateGlobalFilters();
+            },
           ),
         ],
       ),
@@ -261,7 +274,10 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
             ),
             _CustomSwitch(
               value: _ingredientsToggle,
-              onChanged: (v) => setState(() => _ingredientsToggle = v),
+              onChanged: (v) {
+                setState(() => _ingredientsToggle = v);
+                _updateGlobalFilters();
+              },
             ),
           ],
         ),
@@ -326,7 +342,10 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
 
   Widget _buildSegmentBtn(String text, bool isSelected) {
     return GestureDetector(
-      onTap: () => setState(() => _matchAll = text == 'Match All'),
+      onTap: () {
+        setState(() => _matchAll = text == 'Match All');
+        _updateGlobalFilters();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -373,7 +392,10 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: () => setState(() => _selectedIngredientIds.remove(id)),
+            onTap: () {
+              setState(() => _selectedIngredientIds.remove(id));
+              _updateGlobalFilters();
+            },
             child: const Icon(
               Icons.close,
               size: 18,
@@ -406,6 +428,7 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
                     setState(() {
                       _selectedIngredientIds = ids;
                     });
+                    _updateGlobalFilters();
                   },
                 ),
               ),
@@ -500,6 +523,7 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
             _selectedTags.add(tag);
           }
         });
+        _updateGlobalFilters();
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -543,7 +567,10 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
             ),
             _CustomSwitch(
               value: _nutritionToggle,
-              onChanged: (v) => setState(() => _nutritionToggle = v),
+              onChanged: (v) {
+                setState(() => _nutritionToggle = v);
+                _updateGlobalFilters();
+              },
             ),
           ],
         ),
@@ -566,7 +593,10 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
                         value: _maxPrepTime,
                         min: 0,
                         max: 120,
-                        onChanged: (v) => setState(() => _maxPrepTime = v),
+                        onChanged: (v) {
+                          setState(() => _maxPrepTime = v);
+                          _updateGlobalFilters();
+                        },
                       ),
                       const SizedBox(height: 32),
                       _buildSliderRow(
@@ -575,7 +605,10 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
                         value: _maxCookTime,
                         min: 0,
                         max: 240,
-                        onChanged: (v) => setState(() => _maxCookTime = v),
+                        onChanged: (v) {
+                          setState(() => _maxCookTime = v);
+                          _updateGlobalFilters();
+                        },
                       ),
                       const SizedBox(height: 32),
                       _buildSliderRow(
@@ -584,7 +617,10 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
                         value: _maxCalories,
                         min: 0,
                         max: 2000,
-                        onChanged: (v) => setState(() => _maxCalories = v),
+                        onChanged: (v) {
+                          setState(() => _maxCalories = v);
+                          _updateGlobalFilters();
+                        },
                       ),
                     ],
                   ),
@@ -682,118 +718,172 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
           ),
           _CustomSwitch(
             value: _showFavorites,
-            onChanged: (v) => setState(() => _showFavorites = v),
+            onChanged: (v) {
+              setState(() => _showFavorites = v);
+              _updateGlobalFilters();
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVisualDecorator() {
-    return Container(
-      height: 160,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        image: const DecorationImage(
-          image: NetworkImage(
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuD0NrKSsPaC-ltaazpYnwM5HTMeNeMTh2Cd5ySzakvj1CsgSVIcyPEOyEes3pOLHHA5LU-bcQRJdCBC-YA3X2MUWy_deYmi9TuGkwCw9HmROVeekzkPQFKdZBOn0wsSP3TObbb964Cjm4iCAaD8i3Sjf_Zc1-k1hdVtL244mh-ia8Y2GS_DpaiUidoGDuvd8sA6cYxEI-SQk-HiF_3KWetcqNynuIKEzJVRFB51M9sKoX8DVAfM23LO0fjMYzGpd0GlYeklS2AZlzs'),
-          fit: BoxFit.cover,
-          colorFilter: ColorFilter.mode(
-            Colors.grey,
-            BlendMode.saturation,
-          ),
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              AppColors.surface,
-              Colors.transparent,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomActions() {
-    final filterOptions = FilterOptions(
-      pantryIngredientsOnly: _pantryMatch,
-      filterByChoice: _ingredientsToggle,
-      selectedIngredientIds: _ingredientsToggle ? _selectedIngredientIds : [],
-      matchAll: _matchAll,
-      tags: _selectedTags,
-      filterByNutritionTime: _nutritionToggle,
-      maxPrepTime: _nutritionToggle ? _maxPrepTime.toInt() : null,
-      maxCookTime: _nutritionToggle ? _maxCookTime.toInt() : null,
-      maxCalories: _nutritionToggle ? _maxCalories.toInt() : null,
-      showOnlyFavorites: _showFavorites,
-    );
-
-    final filteredAsync = ref.watch(filteredRecipesProvider(filterOptions));
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest.withValues(alpha: 0.9),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      ref.read(activeFilterOptionsProvider.notifier).updateOptions(filterOptions);
-                      context.pop();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.onPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      elevation: 0,
+  Widget _buildFilteredRecipes(AsyncValue<List<Recipe>> filteredAsync) {
+    return filteredAsync.when(
+      data: (recipes) {
+        if (recipes.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.filter_list_off,
+                    size: 64,
+                    color: AppColors.outline.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No recipes found',
+                    style: AppTextStyles.h4.copyWith(
+                      color: AppColors.onSurfaceVariant,
                     ),
-                    child: filteredAsync.when(
-                      data: (recipes) => Text(
-                        'Show ${recipes.length} Recipes',
-                        style: AppTextStyles.labelLarge.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      loading: () => const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      ),
-                      error: (e, s) => const Text('Apply Filters'),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try adjusting your filters',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${recipes.length} Match${recipes.length == 1 ? '' : 'es'}',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.onPrimaryContainer,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 24),
+            ...recipes.map((recipe) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _FilterRecipeCard(recipe: recipe),
+                )),
+          ],
+        );
+      },
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (e, s) => Center(
+        child: Text('Error: $e', style: AppTextStyles.bodyMedium),
+      ),
+    );
+  }
+}
+
+class _FilterRecipeCard extends StatelessWidget {
+  final Recipe recipe;
+  const _FilterRecipeCard({required this.recipe});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/recipes/${recipe.id}'),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 108,
+              height: 108,
+              child: RecipeImage(
+                imageUrl: recipe.imageUrl,
+                fit: BoxFit.cover,
+                iconSize: 32,
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (recipe.tags.isNotEmpty)
+                      Text(
+                        recipe.tags.first.toUpperCase(),
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.0,
+                          fontSize: 10,
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      recipe.name,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.onBackground,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.kitchen_outlined,
+                          size: 13,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${recipe.ingredientIds.length} Ingredients',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
