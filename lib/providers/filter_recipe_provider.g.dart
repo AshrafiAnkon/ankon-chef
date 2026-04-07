@@ -118,7 +118,7 @@ final class FilteredRecipesProvider
   }
 }
 
-String _$filteredRecipesHash() => r'9134de16628423fdf31af839d4df05fb54ef871f';
+String _$filteredRecipesHash() => r'248c3f10f530b18bfff86b429f1dbf3dd4604dca';
 
 /// Pantry ingredients (ingredients the user has in their pantry)
 
@@ -207,4 +207,4 @@ final class AllRecipeIngredientsProvider
 }
 
 String _$allRecipeIngredientsHash() =>
-    r'f08432e46e141560124b7478f713a7e7d7e0b3d9';
+    r'b7619c7d5a75f62181430a37a7a08c90278dd3a0';

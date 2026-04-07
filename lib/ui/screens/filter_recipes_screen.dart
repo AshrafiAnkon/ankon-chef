@@ -40,25 +40,17 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
   @override
   void initState() {
     super.initState();
-    // Intentionally empty post frame
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_tagSearchController.text.isEmpty && _selectedTags.isEmpty && !_pantryMatch) {
-      final activeFilters = ref.read(activeFilterOptionsProvider);
-      _pantryMatch = activeFilters.pantryIngredientsOnly;
-      _ingredientsToggle = activeFilters.filterByChoice;
-      _matchAll = activeFilters.matchAll;
-      _selectedIngredientIds = List.from(activeFilters.selectedIngredientIds);
-      _selectedTags = List.from(activeFilters.tags);
-      _nutritionToggle = activeFilters.filterByNutritionTime;
-      _maxPrepTime = activeFilters.maxPrepTime?.toDouble() ?? 30.0;
-      _maxCookTime = activeFilters.maxCookTime?.toDouble() ?? 45.0;
-      _maxCalories = activeFilters.maxCalories?.toDouble() ?? 800.0;
-      _showFavorites = activeFilters.showOnlyFavorites;
-    }
+    final activeFilters = ref.read(activeFilterOptionsProvider);
+    _pantryMatch = activeFilters.pantryIngredientsOnly;
+    _ingredientsToggle = activeFilters.filterByChoice;
+    _matchAll = activeFilters.matchAll;
+    _selectedIngredientIds = List.from(activeFilters.selectedIngredientIds);
+    _selectedTags = List.from(activeFilters.tags);
+    _nutritionToggle = activeFilters.filterByNutritionTime;
+    _maxPrepTime = activeFilters.maxPrepTime?.toDouble() ?? 30.0;
+    _maxCookTime = activeFilters.maxCookTime?.toDouble() ?? 45.0;
+    _maxCalories = activeFilters.maxCalories?.toDouble() ?? 800.0;
+    _showFavorites = activeFilters.showOnlyFavorites;
   }
 
   @override
@@ -71,9 +63,9 @@ class _FilterRecipesScreenState extends ConsumerState<FilterRecipesScreen> {
     final filterOptions = FilterOptions(
       pantryIngredientsOnly: _pantryMatch,
       filterByChoice: _ingredientsToggle,
-      selectedIngredientIds: _ingredientsToggle ? _selectedIngredientIds : [],
+      selectedIngredientIds: _ingredientsToggle ? List.from(_selectedIngredientIds) : [],
       matchAll: _matchAll,
-      tags: _selectedTags,
+      tags: List.from(_selectedTags),
       filterByNutritionTime: _nutritionToggle,
       maxPrepTime: _nutritionToggle ? _maxPrepTime.toInt() : null,
       maxCookTime: _nutritionToggle ? _maxCookTime.toInt() : null,
